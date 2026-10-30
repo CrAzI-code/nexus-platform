@@ -1,0 +1,31 @@
+
+# Installed dependencies
+node_modules/
+
+# Next.js generated files
+.next/
+
+# Build output
+dist/
+build/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Temporary files
+.DS_Store
+Thumbs.db
+
+# Local cache
+.cache/
+.turbo/
