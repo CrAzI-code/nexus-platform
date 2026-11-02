@@ -2,7 +2,7 @@
 # ADR-001: Authentication Provider
 
 ## Status
-Proposed - Awaiting developer approval.
+Accepted.
 
 ## Context
 
@@ -131,7 +131,13 @@ mapping and identity verification process.
 
 ## Implementation Status
 
-Not implemented.
+The first frontend authentication milestone is implemented:
+- Clerk is configured in the Next.js app with accountless development credentials.
+- The dashboard requires an authenticated Clerk session.
+- Sign-in and sign-up routes are available, with a signed-in user menu.
+- Clerk Organizations are not enabled.
 
-No authentication packages installed.
-No Clerk credentials configured.
+The NestJS API independently verifies Clerk session JWTs, restricts authorized
+parties, provisions NEXUS user identities transactionally, and protects
+`GET /auth/me`. NEXUS remains responsible for authorization and organization
+data. Organization and project authorization are not implemented yet.

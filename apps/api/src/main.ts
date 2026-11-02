@@ -38,7 +38,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== 'production') {
     app.enableCors({
       origin: 'http://localhost:3000',
-      methods: ['GET', 'POST'],
+      methods: ['GET', 'POST', 'PATCH'],
       allowedHeaders: ['Authorization', 'Content-Type'],
     });
   }

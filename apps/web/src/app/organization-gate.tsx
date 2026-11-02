@@ -24,6 +24,7 @@ function toWorkspace(organization: OrganizationMembership): Workspace {
     name: organization.name,
     plan: `${organization.role.toLowerCase()} workspace`,
     initials: initials || "NX",
+    role: organization.role,
   };
 }
 

@@ -138,3 +138,8 @@ organization setup flow and directs members to the workspace dashboard.
 
 Organization and membership creation uses the existing database schema and
 one Prisma transaction. No schema migration was required for onboarding.
+
+Project management uses authenticated organization-scoped endpoints. Project
+creation and creator membership are atomic, and project visibility is derived
+from active organization and project memberships. Project archival preserves
+records in the database.

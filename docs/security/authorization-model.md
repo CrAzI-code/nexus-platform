@@ -232,12 +232,14 @@ Status: v1 authorization policy with initial implementation in progress.
 Authentication provider: Clerk (approved).
 
 Implemented: Clerk session verification in the NestJS API and authenticated
-organization onboarding. Organization endpoints derive user identity from the
-verified NEXUS user context, create the initial OWNER membership transactionally,
-and list only active organizations for the current member.
+organization onboarding and project management. Organization endpoints derive
+user identity from the verified NEXUS user context, create the initial OWNER
+membership transactionally, and list only active organizations for the current
+member. Project endpoints require active organization membership and scope
+project access by role and active project membership.
 
-Project-level access enforcement remains future work and must be implemented
-before adding protected project operations.
+Project task and resource authorization remains future work and must be
+implemented before adding those protected operations.
 
 
 ### OWNER

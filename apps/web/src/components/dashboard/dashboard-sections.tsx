@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type {
   Activity,
-  Project,
+  TaskProject,
   Task,
   TaskPriority,
   TaskStatus,
 } from "./dashboard-data";
 import { formatDueDate, isOverdue } from "./dashboard-data";
 import { Icon } from "./icons";
+import type { OrganizationProject } from "@/lib/organizations";
 
 type OverviewSectionProps = {
   tasks: Task[];
@@ -80,14 +82,33 @@ export function OverviewSection({ tasks }: OverviewSectionProps) {
 }
 
 type ProjectsSectionProps = {
-  projects: Project[];
+  organizationId: string;
+  projects: OrganizationProject[];
   search: string;
+  canCreate: boolean;
+  isLoading: boolean;
+  error: string | null;
+  onCreate: () => void;
+  onEdit: (project: OrganizationProject) => void;
+  onArchive: (project: OrganizationProject) => void;
+  onRetry: () => void;
 };
 
-export function ProjectsSection({ projects, search }: ProjectsSectionProps) {
+export function ProjectsSection({
+  organizationId,
+  projects,
+  search,
+  canCreate,
+  isLoading,
+  error,
+  onCreate,
+  onEdit,
+  onArchive,
+  onRetry,
+}: ProjectsSectionProps) {
   const [showAll, setShowAll] = useState(false);
   const filteredProjects = projects.filter((project) =>
-    `${project.name} ${project.description} ${project.owner}`
+    `${project.name} ${project.description ?? ""} ${project.status}`
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
@@ -99,85 +120,92 @@ export function ProjectsSection({ projects, search }: ProjectsSectionProps) {
       <div className="section-heading">
         <div>
           <h2 id="projects-title">Projects</h2>
-          <p>Keep the bigger picture in view.</p>
+          <p>Projects in this organization.</p>
         </div>
-        {!search && filteredProjects.length > 2 && (
-          <button
-            aria-expanded={showAll || Boolean(search)}
-            className="section-link"
-            onClick={() => setShowAll((value) => !value)}
-            type="button"
-          >
-            {showAll || search ? "Show fewer" : "View all"}
-            <Icon name="arrow-right" width={14} height={14} />
-          </button>
-        )}
+        <div className="project-heading-actions">
+          {!search && filteredProjects.length > 2 && (
+            <button
+              aria-expanded={showAll || Boolean(search)}
+              className="section-link"
+              onClick={() => setShowAll((value) => !value)}
+              type="button"
+            >
+              {showAll || search ? "Show fewer" : "View all"}
+              <Icon name="arrow-right" width={14} height={14} />
+            </button>
+          )}
+          {canCreate && (
+            <button className="primary-button project-create-button" onClick={onCreate} type="button">
+              <Icon name="plus" width={14} height={14} />
+              New project
+            </button>
+          )}
+        </div>
       </div>
-      {visibleProjects.length > 0 ? (
+      {isLoading ? (
+        <p className="project-state" aria-live="polite">Loading projects…</p>
+      ) : error ? (
+        <div className="project-state project-state-error" role="alert">
+          <span>{error}</span>
+          <button className="text-button" onClick={onRetry} type="button">Try again</button>
+        </div>
+      ) : visibleProjects.length > 0 ? (
         <div className="project-list">
           {visibleProjects.map((project) => (
             <article className="project-card" key={project.id}>
               <div className="project-card-top">
-                <span
-                  className="project-symbol"
-                  style={{ backgroundColor: project.softColor, color: project.color }}
-                  aria-hidden="true"
-                >
+                <span className="project-symbol" aria-hidden="true">
                   {project.name
-                    .split(" ")
+                    .split(/\s+/u)
+                    .slice(0, 2)
                     .map((word) => word[0])
                     .join("")
-                    .slice(0, 2)}
+                    .toUpperCase()}
                 </span>
-                <span className="project-menu" aria-hidden="true">
-                  <Icon name="menu" width={17} height={17} />
+                <span className={`project-status ${project.status.toLowerCase()}`}>
+                  {project.status === "ACTIVE" ? "Active" : "Archived"}
                 </span>
               </div>
-              <h3>{project.name}</h3>
-              <p className="project-card-meta">{project.description}</p>
-              <div className="progress-meta">
-                <span>Progress</span>
-                <strong>{project.progress}%</strong>
+              <h3>
+                <Link
+                  href={`/organizations/${encodeURIComponent(organizationId)}/projects/${encodeURIComponent(project.id)}`}
+                >
+                  {project.name}
+                </Link>
+              </h3>
+              <p className="project-card-meta">
+                {project.description || "No description"}
+              </p>
+              <div className="project-card-metrics">
+                <span>{project.memberCount} {project.memberCount === 1 ? "member" : "members"}</span>
+                <span>{project.taskCount} {project.taskCount === 1 ? "task" : "tasks"}</span>
               </div>
-              <div
-                aria-label={`${project.name} ${project.progress}% complete`}
-                className="progress-track"
-                role="progressbar"
-                aria-valuenow={project.progress}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="progress-fill"
-                  style={{ width: `${project.progress}%`, backgroundColor: project.color }}
-                />
-              </div>
-              <div className="project-card-footer">
-                <span className="owner-label">Owner · {project.owner}</span>
-                <div className="avatar-stack" aria-label="Project team">
-                  {project.team.slice(0, 3).map((member) => (
-                    <span
-                      aria-label={member.initials}
-                      className="avatar"
-                      key={member.initials}
-                      style={{ backgroundColor: member.color }}
-                      title={member.initials}
-                    >
-                      {member.initials}
-                    </span>
-                  ))}
-                  {project.team.length > 3 && (
-                    <span className="avatar-more">+{project.team.length - 3}</span>
-                  )}
+              {project.canManage && project.status === "ACTIVE" && (
+                <div className="project-actions">
+                  <button className="text-button" onClick={() => onEdit(project)} type="button">
+                    Edit
+                  </button>
+                  <button className="text-button project-archive-action" onClick={() => onArchive(project)} type="button">
+                    Archive
+                  </button>
                 </div>
-              </div>
+              )}
             </article>
           ))}
         </div>
+      ) : projects.length === 0 && !search ? (
+        <EmptyState
+          title="No projects yet"
+          message={canCreate
+            ? "Create your first project to give your team a place to work."
+            : "Projects you’re assigned to will appear here."}
+          actionLabel={canCreate ? "Create a project" : undefined}
+          onAction={canCreate ? onCreate : undefined}
+        />
       ) : (
         <EmptyState
           title="No projects match your search"
-          message="Try another project name, owner, or team."
+          message="Try another project name or description."
         />
       )}
     </section>
@@ -186,9 +214,8 @@ export function ProjectsSection({ projects, search }: ProjectsSectionProps) {
 
 type TasksSectionProps = {
   tasks: Task[];
-  projects: Project[];
+  projects: TaskProject[];
   search: string;
-  onCreateTask: () => void;
   onClearSearch: () => void;
 };
 
@@ -210,7 +237,6 @@ export function TasksSection({
   tasks,
   projects,
   search,
-  onCreateTask,
   onClearSearch,
 }: TasksSectionProps) {
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -319,10 +345,10 @@ export function TasksSection({
             message={
               hasFilters
                 ? "Clear the filters or try a different search."
-                : "Create a task to get your work moving."
+                : "Project task management will be available in a later milestone."
             }
-            actionLabel={hasFilters ? "Clear filters" : "Create a task"}
-            onAction={hasFilters ? resetFilters : onCreateTask}
+            actionLabel={hasFilters ? "Clear filters" : undefined}
+            onAction={hasFilters ? resetFilters : undefined}
           />
         )}
       </div>

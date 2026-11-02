@@ -438,5 +438,8 @@ slug constraint is used to safely retry collisions. Listing organizations is
 scoped to the authenticated user's active memberships and active organizations.
 
 No schema change or migration is required for organization onboarding.
+Project management also uses the existing project and project-member tables;
+the creator is added as an active member in the same transaction. Project
+membership has no separate role field in v1.
 Production deployment and data-retention policies remain separate operational
 decisions.

@@ -1,13 +1,12 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { useEffect, useMemo, useState } from "react";
 import {
   initialActivity,
   initialTasks,
-  projects as allProjects,
   type Activity,
   type Task,
-  type TaskPriority,
   type Workspace,
 } from "./dashboard-data";
 import { DashboardSidebar, type DashboardSection } from "./dashboard-sidebar";
@@ -17,27 +16,43 @@ import {
   ProjectsSection,
   TasksSection,
 } from "./dashboard-sections";
-import { NewTaskDialog } from "./new-task-dialog";
 import { Icon } from "./icons";
+import { ProjectDialog } from "./project-dialog";
+import {
+  archiveProject,
+  createProject,
+  listProjects,
+  updateProject,
+  type OrganizationProject,
+  type ProjectInput,
+} from "@/lib/organizations";
+
+const EMPTY_PROJECTS: OrganizationProject[] = [];
 
 export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
-  const [workspaceId, setWorkspaceId] = useState(
-    workspaces[workspaces.length - 1]?.id ?? "",
-  );
+  const { getToken } = useAuth();
+  const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? "");
   const [activeSection, setActiveSection] = useState<DashboardSection>("home");
   const [search, setSearch] = useState("");
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks] = useState<Task[]>(initialTasks);
   const [activities] = useState<Activity[]>(initialActivity);
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
-  const [taskCreated, setTaskCreated] = useState(false);
+  const [projectLoad, setProjectLoad] = useState<{
+    organizationId: string;
+    projects: OrganizationProject[];
+    error: string | null;
+  }>({ organizationId: "", projects: [], error: null });
+  const [projectDialog, setProjectDialog] = useState<
+    "create" | OrganizationProject | null
+  >(null);
+  const [projectNotice, setProjectNotice] = useState<string | null>(null);
+  const [projectRetry, setProjectRetry] = useState(0);
 
   const workspace = workspaces.find((item) => item.id === workspaceId) ?? workspaces[0];
-  const currentProjects = useMemo(
-    () => allProjects.filter((project) => project.workspaceId === workspaceId),
-    [workspaceId],
-  );
+  const isProjectsLoading = projectLoad.organizationId !== workspaceId;
+  const projects = isProjectsLoading ? EMPTY_PROJECTS : projectLoad.projects;
+  const projectsError = isProjectsLoading ? null : projectLoad.error;
   const currentTasks = useMemo(
     () => tasks.filter((task) => task.workspaceId === workspaceId),
     [tasks, workspaceId],
@@ -48,28 +63,118 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
   );
 
   useEffect(() => {
-    if (!taskCreated) return;
-    const timeoutId = window.setTimeout(() => setTaskCreated(false), 3500);
-    return () => window.clearTimeout(timeoutId);
-  }, [taskCreated]);
+    if (!workspaceId) return;
 
-  function createTask(details: {
-    title: string;
-    projectId: string;
-    priority: TaskPriority;
-    dueDate: string;
-  }) {
-    const newTask: Task = {
-      ...details,
-      id: `task-${Date.now()}`,
-      workspaceId,
-      status: "TODO",
-      dueDate: details.dueDate || null,
+    let active = true;
+
+    async function loadProjects() {
+      try {
+        const token = await getToken();
+        if (!token) {
+          throw new Error("Your session is unavailable. Sign in again to continue.");
+        }
+        const result = await listProjects(token, workspaceId);
+        if (active) {
+          setProjectLoad({
+            organizationId: workspaceId,
+            projects: result,
+            error: null,
+          });
+        }
+      } catch (requestError) {
+        if (active) {
+          setProjectLoad({
+            organizationId: workspaceId,
+            projects: [],
+            error:
+              requestError instanceof Error
+                ? requestError.message
+                : "We couldn’t load projects. Please try again.",
+          });
+        }
+      }
+    }
+
+    void loadProjects();
+    return () => {
+      active = false;
     };
-    setTasks((currentTasks) => [newTask, ...currentTasks]);
-    setIsTaskDialogOpen(false);
-    setTaskCreated(true);
+  }, [getToken, projectRetry, workspaceId]);
+
+  useEffect(() => {
+    if (!projectNotice) return;
+    const timeoutId = window.setTimeout(() => setProjectNotice(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [projectNotice]);
+
+  async function getSessionToken(): Promise<string> {
+    const token = await getToken();
+    if (!token) {
+      throw new Error("Your session is unavailable. Sign in again to continue.");
+    }
+    return token;
   }
+
+  async function saveProject(input: ProjectInput) {
+    const token = await getSessionToken();
+    if (typeof projectDialog === "object" && projectDialog !== null) {
+      const updated = await updateProject(
+        token,
+        workspaceId,
+        projectDialog.id,
+        input,
+      );
+      setProjectLoad((current) => ({
+        ...current,
+        projects: current.projects.map((project) =>
+          project.id === updated.id ? updated : project,
+        ),
+      }));
+      setProjectNotice("Project changes saved.");
+      return;
+    }
+
+    const created = await createProject(token, workspaceId, input);
+    setProjectLoad((current) => ({
+      ...current,
+      projects: [created, ...current.projects],
+    }));
+    setProjectNotice("Project created.");
+  }
+
+  async function handleArchive(project: OrganizationProject) {
+    if (!window.confirm(`Archive “${project.name}”? You can still view it later.`)) {
+      return;
+    }
+    try {
+      const token = await getSessionToken();
+      const archived = await archiveProject(token, workspaceId, project.id);
+      setProjectLoad((current) => ({
+        ...current,
+        projects: current.projects.map((item) =>
+          item.id === archived.id ? archived : item,
+        ),
+      }));
+      setProjectNotice("Project archived.");
+    } catch (requestError) {
+      setProjectLoad((current) => ({
+        ...current,
+        error:
+        requestError instanceof Error
+          ? requestError.message
+          : "We couldn’t archive this project. Please try again.",
+      }));
+    }
+  }
+
+  const canCreateProject =
+    workspace.role === "OWNER" ||
+    workspace.role === "ADMIN" ||
+    workspace.role === "MANAGER";
+  const taskProjects = useMemo(
+    () => projects.map(({ id, name }) => ({ id, name })),
+    [projects],
+  );
 
   return (
     <div className="dashboard-shell" id="home">
@@ -146,32 +251,44 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
                   </div>
                 )}
               </div>
-              <button
-                className="primary-button"
-                onClick={() => setIsTaskDialogOpen(true)}
-                type="button"
-              >
-                <Icon name="plus" width={16} height={16} />
-                <span>New task</span>
-              </button>
+              {canCreateProject && (
+                <button
+                  className="primary-button"
+                  onClick={() => setProjectDialog("create")}
+                  type="button"
+                >
+                  <Icon name="plus" width={16} height={16} />
+                  <span>New project</span>
+                </button>
+              )}
             </div>
           </header>
 
           <p className="mock-notice">
             <Icon name="info" width={14} height={14} />
-            Dashboard preview · Organization access is live; project, task, and activity data below is sample data.
+            Projects are connected to your organization. Tasks and activity are not part of this milestone.
           </p>
 
           <OverviewSection tasks={currentTasks} />
 
           <div className="content-grid">
             <div className="primary-column">
-              <ProjectsSection projects={currentProjects} search={search} />
+              <ProjectsSection
+                canCreate={canCreateProject}
+                error={projectsError}
+                isLoading={isProjectsLoading}
+                onArchive={handleArchive}
+                onCreate={() => setProjectDialog("create")}
+                onEdit={setProjectDialog}
+                onRetry={() => setProjectRetry((value) => value + 1)}
+                organizationId={workspaceId}
+                projects={projects}
+                search={search}
+              />
               <TasksSection
                 key={workspaceId}
                 onClearSearch={() => setSearch("")}
-                onCreateTask={() => setIsTaskDialogOpen(true)}
-                projects={currentProjects}
+                projects={taskProjects}
                 search={search}
                 tasks={currentTasks}
               />
@@ -183,17 +300,17 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
           <p className="workspace-footnote">{workspace.name} · Organization workspace</p>
         </div>
       </main>
-      {isTaskDialogOpen && (
-        <NewTaskDialog
-          onClose={() => setIsTaskDialogOpen(false)}
-          onCreate={createTask}
-          projects={currentProjects}
+      {projectDialog && (
+        <ProjectDialog
+          onClose={() => setProjectDialog(null)}
+          onSave={saveProject}
+          project={typeof projectDialog === "object" ? projectDialog : undefined}
         />
       )}
-      {taskCreated && (
+      {projectNotice && (
         <div className="toast" role="status">
           <Icon name="check" width={16} height={16} />
-          Task added to your workspace.
+          {projectNotice}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
-import type { Project, TaskPriority } from "./dashboard-data";
+import type { TaskProject, TaskPriority } from "./dashboard-data";
 import { Icon } from "./icons";
 
 type NewTaskDetails = {
@@ -12,7 +12,7 @@ type NewTaskDetails = {
 };
 
 type NewTaskDialogProps = {
-  projects: Project[];
+  projects: TaskProject[];
   onClose: () => void;
   onCreate: (task: NewTaskDetails) => void;
 };
