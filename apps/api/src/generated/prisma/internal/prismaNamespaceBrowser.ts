@@ -58,7 +58,10 @@ export const ModelName = {
   Project: 'Project',
   ProjectMember: 'ProjectMember',
   Task: 'Task',
-  Invitation: 'Invitation'
+  TaskComment: 'TaskComment',
+  TaskActivity: 'TaskActivity',
+  Invitation: 'Invitation',
+  Notification: 'Notification'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -170,6 +173,34 @@ export const TaskScalarFieldEnum = {
 export type TaskScalarFieldEnum = (typeof TaskScalarFieldEnum)[keyof typeof TaskScalarFieldEnum]
 
 
+export const TaskCommentScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  taskId: 'taskId',
+  authorId: 'authorId',
+  body: 'body',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TaskCommentScalarFieldEnum = (typeof TaskCommentScalarFieldEnum)[keyof typeof TaskCommentScalarFieldEnum]
+
+
+export const TaskActivityScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  taskId: 'taskId',
+  actorId: 'actorId',
+  type: 'type',
+  message: 'message',
+  createdAt: 'createdAt'
+} as const
+
+export type TaskActivityScalarFieldEnum = (typeof TaskActivityScalarFieldEnum)[keyof typeof TaskActivityScalarFieldEnum]
+
+
 export const InvitationScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -185,6 +216,24 @@ export const InvitationScalarFieldEnum = {
 } as const
 
 export type InvitationScalarFieldEnum = (typeof InvitationScalarFieldEnum)[keyof typeof InvitationScalarFieldEnum]
+
+
+export const NotificationScalarFieldEnum = {
+  id: 'id',
+  recipientId: 'recipientId',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  type: 'type',
+  title: 'title',
+  message: 'message',
+  resourceType: 'resourceType',
+  resourceId: 'resourceId',
+  eventKey: 'eventKey',
+  readAt: 'readAt',
+  createdAt: 'createdAt'
+} as const
+
+export type NotificationScalarFieldEnum = (typeof NotificationScalarFieldEnum)[keyof typeof NotificationScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -22,6 +22,9 @@ describe('ProjectsController', () => {
     create: vi.fn(),
     list: vi.fn(),
     get: vi.fn(),
+    listMembers: vi.fn(),
+    addMember: vi.fn(),
+    removeMember: vi.fn(),
     update: vi.fn(),
     archive: vi.fn(),
   };
@@ -42,6 +45,18 @@ describe('ProjectsController', () => {
     projects.create.mockResolvedValue(project);
     projects.list.mockResolvedValue([project]);
     projects.get.mockResolvedValue(project);
+    projects.listMembers.mockResolvedValue({
+      members: [],
+      availableMembers: [],
+      canManage: true,
+    });
+    projects.addMember.mockResolvedValue({
+      userId: '33333333-3333-4333-8333-333333333333',
+      name: 'New Member',
+      email: 'member@example.com',
+      role: 'MEMBER',
+    });
+    projects.removeMember.mockResolvedValue(undefined);
     projects.update.mockResolvedValue(project);
     projects.archive.mockResolvedValue({ ...project, status: 'ARCHIVED' });
 
@@ -165,5 +180,64 @@ describe('ProjectsController', () => {
       .expect(400);
 
     expect(projects.update).not.toHaveBeenCalled();
+  });
+
+  it('lists, adds, and removes project members using authenticated route scope', async () => {
+    const memberUserId = '33333333-3333-4333-8333-333333333333';
+    const auth = { Authorization: 'Bearer project-member-test-token' };
+
+    await request(app.getHttpServer())
+      .get(`${route}/${projectId}/members`)
+      .set(auth)
+      .expect(200)
+      .expect({ members: [], availableMembers: [], canManage: true });
+    await request(app.getHttpServer())
+      .post(`${route}/${projectId}/members`)
+      .set(auth)
+      .send({ userId: memberUserId })
+      .expect(201);
+    await request(app.getHttpServer())
+      .delete(`${route}/${projectId}/members/${memberUserId}`)
+      .set(auth)
+      .expect(200);
+
+    expect(projects.listMembers).toHaveBeenCalledWith(
+      organizationId,
+      projectId,
+      user.id,
+    );
+    expect(projects.addMember).toHaveBeenCalledWith(
+      organizationId,
+      projectId,
+      user.id,
+      memberUserId,
+    );
+    expect(projects.removeMember).toHaveBeenCalledWith(
+      organizationId,
+      projectId,
+      user.id,
+      memberUserId,
+    );
+  });
+
+  it('rejects invalid project-member IDs and client-supplied membership fields', async () => {
+    await request(app.getHttpServer())
+      .post(`${route}/${projectId}/members`)
+      .set('Authorization', 'Bearer project-member-test-token')
+      .send({ userId: 'not-a-uuid' })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post(`${route}/${projectId}/members`)
+      .set('Authorization', 'Bearer project-member-test-token')
+      .send({
+        userId: '33333333-3333-4333-8333-333333333333',
+        organizationId: 'another-organization',
+        role: 'OWNER',
+        status: 'ACTIVE',
+      })
+      .expect(400);
+
+    expect(projects.addMember).not.toHaveBeenCalled();
   });
 });

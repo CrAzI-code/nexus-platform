@@ -19,6 +19,8 @@ export class UserProvisioningService {
   async provision(clerkSubject: string): Promise<AuthenticatedUser> {
     const clerkUser = await this.clerkBackend.getUser(clerkSubject);
     const email = clerkUser.primaryEmailAddress?.emailAddress?.trim();
+    const primaryEmailVerified =
+      clerkUser.primaryEmailAddress?.verification?.status === 'verified';
 
     if (!email) {
       throw new UnprocessableEntityException(
@@ -43,11 +45,12 @@ export class UserProvisioningService {
         });
 
         if (identity) {
-          return transaction.user.update({
+          const user = await transaction.user.update({
             where: { id: identity.userId },
             data: profile,
             select: { id: true, name: true, email: true, status: true },
           });
+          return { ...user, primaryEmailVerified };
         }
 
         const user = await transaction.user.create({
@@ -63,7 +66,7 @@ export class UserProvisioningService {
           },
         });
 
-        return user;
+        return { ...user, primaryEmailVerified };
       });
     } catch (error) {
       if (
@@ -80,13 +83,14 @@ export class UserProvisioningService {
         throw error;
       }
 
-      return this.prisma.$transaction((transaction) =>
-        transaction.user.update({
+      return this.prisma.$transaction(async (transaction) => {
+        const user = await transaction.user.update({
           where: { id: existingIdentity.userId },
           data: profile,
           select: { id: true, name: true, email: true, status: true },
-        }),
-      );
+        });
+        return { ...user, primaryEmailVerified };
+      });
     }
   }
 }

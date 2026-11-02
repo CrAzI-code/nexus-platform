@@ -4,6 +4,8 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProjectDialog } from "@/components/dashboard/project-dialog";
+import { ProjectMembersPanel } from "@/components/dashboard/project-members-panel";
+import { TaskManagement } from "@/components/dashboard/task-management";
 import {
   archiveProject,
   getProject,
@@ -133,49 +135,73 @@ export default function ProjectDetails({
             </button>
           </section>
         ) : project ? (
-          <section className="project-details-card">
-            <div className="project-details-top">
-              <span className={`project-status ${project.status.toLowerCase()}`}>
-                {project.status === "ACTIVE" ? "Active" : "Archived"}
-              </span>
-              {project.canManage && project.status === "ACTIVE" && (
-                <div className="project-details-actions">
-                  <button
-                    className="secondary-button"
-                    onClick={() => setIsEditing(true)}
-                    type="button"
-                  >
-                    Edit project
-                  </button>
-                  <button
-                    className="secondary-button project-archive-button"
-                    onClick={archive}
-                    type="button"
-                  >
-                    Archive
-                  </button>
+          <>
+            <section className="project-details-card">
+              <div className="project-details-top">
+                <span className={`project-status ${project.status.toLowerCase()}`}>
+                  {project.status === "ACTIVE" ? "Active" : "Archived"}
+                </span>
+                {project.canManage && project.status === "ACTIVE" && (
+                  <div className="project-details-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={() => setIsEditing(true)}
+                      type="button"
+                    >
+                      Edit project
+                    </button>
+                    <button
+                      className="secondary-button project-archive-button"
+                      onClick={archive}
+                      type="button"
+                    >
+                      Archive
+                    </button>
+                  </div>
+                )}
+              </div>
+              <h1>{project.name}</h1>
+              <p className="project-details-description">
+                {project.description || "No description has been added."}
+              </p>
+              <div className="project-details-metrics">
+                <div>
+                  <strong>{project.memberCount}</strong>
+                  <span>{project.memberCount === 1 ? "Member" : "Members"}</span>
                 </div>
-              )}
-            </div>
-            <h1>{project.name}</h1>
-            <p className="project-details-description">
-              {project.description || "No description has been added."}
-            </p>
-            <div className="project-details-metrics">
-              <div>
-                <strong>{project.memberCount}</strong>
-                <span>{project.memberCount === 1 ? "Member" : "Members"}</span>
+                <div>
+                  <strong>{project.taskCount}</strong>
+                  <span>{project.taskCount === 1 ? "Task" : "Tasks"}</span>
+                </div>
               </div>
-              <div>
-                <strong>{project.taskCount}</strong>
-                <span>{project.taskCount === 1 ? "Task" : "Tasks"}</span>
-              </div>
-            </div>
-            {error && <p className="project-details-error" role="alert">{error}</p>}
-            <p className="project-details-note">
-              Project tasks and team management are coming in a later milestone.
-            </p>
-          </section>
+              {error && <p className="project-details-error" role="alert">{error}</p>}
+            </section>
+            <ProjectMembersPanel
+              canManage={project.canManage}
+              organizationId={organizationId}
+              projectId={projectId}
+              projectStatus={project.status}
+            />
+            <TaskManagement
+              organizationId={organizationId}
+              onTaskCreated={() => {
+                setLoadedProject((current) =>
+                  current.key === requestKey && current.project
+                    ? {
+                        ...current,
+                        project: {
+                          ...current.project,
+                          taskCount: current.project.taskCount + 1,
+                        },
+                      }
+                    : current,
+                );
+              }}
+              projectId={projectId}
+              projectName={project.name}
+              projectStatus={project.status}
+            />
+          </>
         ) : null}
       </div>
       {isEditing && project && (

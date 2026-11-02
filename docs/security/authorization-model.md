@@ -106,6 +106,24 @@ they automatically become a project member.
 - Cannot manage organization membership.
 - Cannot create projects.
 
+## 5.1 Team Invitations and Membership Management
+
+- Owners and Admins may invite by email, revoke pending invitations, change
+  non-owner member roles, and remove non-owner members.
+- A normal invitation may grant ADMIN, MANAGER, or MEMBER, but never OWNER.
+- Invitation acceptance requires an authenticated NEXUS account whose internal
+  email matches the verified primary email returned by Clerk, regardless of
+  email letter casing.
+- Tokens are cryptographically random, stored only as SHA-256 hashes, and
+  returned once to the authorized inviter for sharing. Token hashes and raw
+  tokens are excluded from team-list and pending-invitation responses.
+- Invitations expire after seven days. Duplicate active invitations are
+  serialized by the database transaction isolation level.
+- An organization Owner cannot be demoted or removed. Removing a member revokes
+  active project membership while preserving task and activity history.
+- Team member listings are visible to active organization members; only Owners
+  and Admins receive pending invitation details or management actions.
+
 ## 6. Project Membership Rules
 
 Project membership determines which projects
@@ -123,8 +141,12 @@ Rules:
   project membership.
 - Project creation by a Manager automatically
   adds the creator as a project member.
-- Only authorized users can add or remove
-  project members.
+- Only Owners, Admins, and Managers can add or remove project members.
+- A user must have active membership in the same organization before being
+  added to a project. Re-adding a removed project member reactivates the
+  existing membership record.
+- Removed project members are excluded from task-assignee choices and cannot
+  be newly assigned.
 
 Project-level roles are not introduced
 in NEXUS v1.
@@ -172,6 +194,23 @@ Database constraints must protect
 important ownership relationships.
 
 Cross-organization access must be denied.
+
+## 8.1 Notifications
+
+- Notification endpoints use the authenticated internal NEXUS user ID as the
+  recipient scope; clients cannot choose a recipient.
+- Each notification read, update, and deletion is constrained to its recipient.
+- Task notification listing rechecks active organization and project
+  membership at read time, matching task API access. Project notifications
+  additionally allow OWNER/ADMIN access because those roles can view projects
+  across their organization.
+- Invitation notifications are the limited exception for non-members: they are
+  returned only when the authenticated user's verified primary email matches
+  the still-pending, unexpired invitation.
+- Invitation acceptance from a notification uses its invitation UUID, but
+  repeats the same verified-email and atomic-acceptance checks as token links.
+- Notification links are built from validated resource types and IDs and never
+  contain task, Clerk, or invitation tokens.
 
 ## 9. Authorization Enforcement
 
@@ -238,8 +277,13 @@ membership transactionally, and list only active organizations for the current
 member. Project endpoints require active organization membership and scope
 project access by role and active project membership.
 
-Project task and resource authorization remains future work and must be
-implemented before adding those protected operations.
+Task endpoints require active organization membership and active project
+membership for every request. Organization Owners, Admins, and Managers may
+edit task details, assign or unassign tasks for other active project members,
+archive, and restore. Every project member may create tasks, change status,
+report blockers, and comment. Members cannot assign or unassign tasks,
+including assigning themselves. Task, comment, and activity queries are scoped
+by organization and project; task IDs alone never determine access.
 
 
 ### OWNER

@@ -69,10 +69,10 @@ inside one NestJS application.
 ## 4. Communication
 
 The frontend communicates with the backend
-through HTTP APIs using JSON.
-
-WebSocket communication will be introduced
-when implementing real-time features.
+through HTTP APIs using JSON. Authenticated
+Server-Sent Events deliver live notifications;
+WebSockets remain a future option for
+bidirectional collaboration features.
 
 The backend is responsible for enforcing
 authorization and business rules.
@@ -107,7 +107,7 @@ The following technologies are planned
 for later engineering phases:
 
 - Redis for caching and coordination.
-- WebSockets for live communication.
+- WebSockets for future bidirectional live collaboration.
 - SQS or another message broker for jobs.
 - S3-compatible storage for files.
 - AWS for cloud deployment.
@@ -143,3 +143,41 @@ Project management uses authenticated organization-scoped endpoints. Project
 creation and creator membership are atomic, and project visibility is derived
 from active organization and project memberships. Project archival preserves
 records in the database.
+
+Task management uses authenticated organization- and project-scoped endpoints.
+Task creation, comments, and task activity entries are written transactionally.
+Task comments and activity history reference both the parent task and the
+project member who authored the entry, preserving tenant and project integrity.
+Tasks are archived and restored without hard deletion.
+
+Organization team management uses authenticated, organization-scoped endpoints.
+Owners and Admins can issue and revoke invitations, change non-owner member roles,
+and remove members. Invitation tokens are random, stored only as SHA-256 hashes,
+and returned once to the authorized inviter so they can share the invitation
+link. Acceptance requires a matching authenticated NEXUS email and updates the
+invitation and membership atomically. Optional Brevo transactional email sends
+invitation links after the invitation transaction commits.
+
+Persisted in-app notifications are stored in PostgreSQL in the same database
+transaction as task, project, invitation, or team events. Their stable event
+keys and a recipient-scoped unique constraint prevent duplicate insertion.
+The API publishes a stream event only after the transaction commits and
+revalidates organization/project access when listing notifications. The
+Next.js dashboard provides a paginated notification panel with unread counts,
+read/delete actions, relative timestamps, and safe resource navigation.
+
+The authenticated `GET /notifications/stream` endpoint streams `notification`
+events containing the persisted notification JSON and `heartbeat` events
+containing a timestamp. The recipient is derived only from the verified Clerk
+session. The frontend sends its bearer token in the `Authorization` header,
+reconnects with bounded exponential backoff, and refreshes persisted history
+and unread counts after reconnecting to recover missed events. The frontend
+uses the existing notification APIs if streaming is unavailable.
+
+Live delivery currently uses an in-process subscriber registry. Events are
+available only to connections attached to the same API instance; persisted
+notification history remains available across instances. Multi-instance live
+delivery requires shared pub/sub or a message broker, with every instance
+subscribed to committed notification events and routing them to local
+recipients. No Redis, broker, or external notification infrastructure is
+currently required.

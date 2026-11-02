@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client"
-  output = "../src/generated/prisma"
+  output          = "../src/generated/prisma"
   previewFeatures = ["partialIndexes"]
 }
 
@@ -62,11 +62,39 @@ enum TaskPriority {
   URGENT
 }
 
+enum TaskActivityType {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  ASSIGNEE_CHANGED
+  COMMENT_ADDED
+  ARCHIVED
+  RESTORED
+}
+
 enum InvitationStatus {
   PENDING
   ACCEPTED
   EXPIRED
   REVOKED
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_COMMENT
+  TASK_MENTION
+  TASK_STATUS_CHANGED
+  PROJECT_ADDED
+  PROJECT_UPDATED
+  ORGANIZATION_INVITATION
+  TEAM_UPDATED
+}
+
+enum NotificationResourceType {
+  TASK
+  PROJECT
+  ORGANIZATION_INVITATION
+  ORGANIZATION
 }
 
 model User {
@@ -79,6 +107,7 @@ model User {
 
   identities  AuthIdentity[]
   memberships OrganizationMembership[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -108,6 +137,7 @@ model Organization {
   memberships OrganizationMembership[]
   projects    Project[]
   invitations Invitation[]
+  notifications Notification[]
 
   @@map("organizations")
 }
@@ -146,6 +176,7 @@ model Project {
 
   members ProjectMember[]
   tasks   Task[]
+  notifications Notification[]
 
   @@unique([organizationId, id])
   @@index([organizationId, status])
@@ -164,8 +195,10 @@ model ProjectMember {
   project    Project                @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
   membership OrganizationMembership @relation(fields: [organizationId, userId], references: [organizationId, userId], onDelete: Restrict)
 
-  assignedTasks Task[] @relation("TaskAssignee")
-  createdTasks  Task[] @relation("TaskCreator")
+  assignedTasks  Task[]         @relation("TaskAssignee")
+  createdTasks   Task[]         @relation("TaskCreator")
+  comments       TaskComment[]  @relation("TaskCommentAuthor")
+  taskActivities TaskActivity[] @relation("TaskActivityActor")
 
   @@unique([organizationId, projectId, userId])
   @@index([organizationId, userId, status])
@@ -191,12 +224,49 @@ model Task {
 
   creator ProjectMember @relation("TaskCreator", fields: [organizationId, projectId, creatorId], references: [organizationId, projectId, userId], onDelete: Restrict)
 
-  assignee ProjectMember? @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
+  assignee   ProjectMember? @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
+  comments   TaskComment[]
+  activities TaskActivity[]
 
+  @@unique([organizationId, projectId, id])
   @@index([organizationId, projectId, status])
   @@index([organizationId, assigneeId, status])
   @@index([organizationId, projectId, creatorId])
   @@map("tasks")
+}
+
+model TaskComment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  taskId         String   @map("task_id") @db.Uuid
+  authorId       String   @map("author_id") @db.Uuid
+  body           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  task   Task          @relation(fields: [organizationId, projectId, taskId], references: [organizationId, projectId, id], onDelete: Restrict)
+  author ProjectMember @relation("TaskCommentAuthor", fields: [organizationId, projectId, authorId], references: [organizationId, projectId, userId], onDelete: Restrict)
+
+  @@index([organizationId, projectId, taskId, createdAt])
+  @@map("task_comments")
+}
+
+model TaskActivity {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  projectId      String           @map("project_id") @db.Uuid
+  taskId         String           @map("task_id") @db.Uuid
+  actorId        String           @map("actor_id") @db.Uuid
+  type           TaskActivityType
+  message        String
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  task  Task          @relation(fields: [organizationId, projectId, taskId], references: [organizationId, projectId, id], onDelete: Restrict)
+  actor ProjectMember @relation("TaskActivityActor", fields: [organizationId, projectId, actorId], references: [organizationId, projectId, userId], onDelete: Restrict)
+
+  @@index([organizationId, projectId, taskId, createdAt])
+  @@map("task_activities")
 }
 
 model Invitation {
@@ -217,4 +287,30 @@ model Invitation {
 
   @@index([organizationId, status])
   @@map("invitations")
+}
+
+model Notification {
+  id             String                   @id @default(uuid()) @db.Uuid
+  recipientId    String                   @map("recipient_id") @db.Uuid
+  organizationId String                   @map("organization_id") @db.Uuid
+  projectId      String?                  @map("project_id") @db.Uuid
+  type           NotificationType
+  title          String                   @db.VarChar(200)
+  message        String                   @db.VarChar(1000)
+  resourceType   NotificationResourceType @map("resource_type")
+  resourceId     String                   @map("resource_id") @db.Uuid
+  eventKey       String                   @map("event_key") @db.VarChar(160)
+  readAt         DateTime?                @map("read_at") @db.Timestamptz
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+
+  recipient   User         @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  project     Project?      @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+
+  @@unique([recipientId, eventKey])
+  @@index([recipientId, createdAt, id])
+  @@index([recipientId, readAt, createdAt])
+  @@index([organizationId, recipientId])
+  @@index([projectId])
+  @@map("notifications")
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -12,6 +13,8 @@ import type { AuthenticatedUser } from '../auth/authenticated-user.js';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import {
+  AddProjectMemberDto,
+  AddProjectMemberPipe,
   CreateProjectDto,
   CreateProjectPipe,
   UpdateProjectDto,
@@ -19,6 +22,8 @@ import {
 } from './project.dto.js';
 import {
   ProjectsService,
+  type ProjectMemberResponse,
+  type ProjectMembersResponse,
   type ProjectResponse,
 } from './projects.service.js';
 
@@ -51,6 +56,45 @@ export class ProjectsController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<ProjectResponse> {
     return this.projects.get(organizationId, projectId, user.id);
+  }
+
+  @Get(':projectId/members')
+  listMembers(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ProjectMembersResponse> {
+    return this.projects.listMembers(organizationId, projectId, user.id);
+  }
+
+  @Post(':projectId/members')
+  addMember(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(AddProjectMemberPipe) body: AddProjectMemberDto,
+  ): Promise<ProjectMemberResponse> {
+    return this.projects.addMember(
+      organizationId,
+      projectId,
+      user.id,
+      body.userId,
+    );
+  }
+
+  @Delete(':projectId/members/:memberUserId')
+  removeMember(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('memberUserId', ParseUUIDPipe) memberUserId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    return this.projects.removeMember(
+      organizationId,
+      projectId,
+      user.id,
+      memberUserId,
+    );
   }
 
   @Patch(':projectId')

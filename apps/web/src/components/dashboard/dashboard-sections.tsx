@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import type {
   Activity,
-  TaskProject,
   Task,
   TaskPriority,
   TaskStatus,
@@ -23,7 +22,7 @@ export function OverviewSection({ tasks }: OverviewSectionProps) {
   const overdue = tasks.filter(isOverdue).length;
   const cards = [
     {
-      label: "Tasks assigned to me",
+      label: "Tasks in your projects",
       value: tasks.length,
       note: "Across your active projects",
       icon: "check-square" as const,
@@ -214,9 +213,13 @@ export function ProjectsSection({
 
 type TasksSectionProps = {
   tasks: Task[];
-  projects: TaskProject[];
+  projects: OrganizationProject[];
+  organizationId: string;
   search: string;
   onClearSearch: () => void;
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
 };
 
 const taskStatusLabel: Record<TaskStatus, string> = {
@@ -236,8 +239,12 @@ const priorityLabel: Record<TaskPriority, string> = {
 export function TasksSection({
   tasks,
   projects,
+  organizationId,
   search,
   onClearSearch,
+  isLoading,
+  error,
+  onRetry,
 }: TasksSectionProps) {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
@@ -268,8 +275,8 @@ export function TasksSection({
     <section aria-labelledby="tasks-title" className="surface-card tasks-card" id="my-tasks">
       <div className="section-heading">
         <div>
-          <h2 id="tasks-title">My tasks</h2>
-          <p>Priorities to keep your week moving.</p>
+          <h2 id="tasks-title">Project tasks</h2>
+          <p>Active work across the projects you can access.</p>
         </div>
         <div className="task-filters" aria-label="Filter tasks">
           <label className="sr-only" htmlFor="status-filter">Filter by status</label>
@@ -307,7 +314,16 @@ export function TasksSection({
         <span>Due date</span>
       </div>
       <div className="task-list" aria-live="polite">
-        {visibleTasks.length > 0 ? (
+        {isLoading ? (
+          <p className="task-list-message">Loading tasks…</p>
+        ) : error ? (
+          <div className="task-list-message task-list-error" role="alert">
+            <p>{error}</p>
+            <button className="text-button" onClick={onRetry} type="button">
+              Try again
+            </button>
+          </div>
+        ) : visibleTasks.length > 0 ? (
           visibleTasks.map((task) => {
             const overdue = isOverdue(task);
             return (
@@ -319,10 +335,13 @@ export function TasksSection({
                   >
                     {task.status === "DONE" && <Icon name="check" width={12} height={12} />}
                   </span>
-                  <span className="task-title-copy">
+                  <Link
+                    className="task-title-copy task-title-link"
+                    href={`/organizations/${encodeURIComponent(organizationId)}/projects/${encodeURIComponent(task.projectId)}/tasks/${encodeURIComponent(task.id)}`}
+                  >
                     <strong>{task.title}</strong>
                     <span>{projectNames.get(task.projectId) ?? "Project"}</span>
-                  </span>
+                  </Link>
                 </div>
                 <span className={`task-status ${task.status.toLowerCase().replace("_", "-")}`}>
                   {taskStatusLabel[task.status]}
@@ -345,7 +364,7 @@ export function TasksSection({
             message={
               hasFilters
                 ? "Clear the filters or try a different search."
-                : "Project task management will be available in a later milestone."
+                : "Create your first task from a project page."
             }
             actionLabel={hasFilters ? "Clear filters" : undefined}
             onAction={hasFilters ? resetFilters : undefined}
@@ -373,7 +392,7 @@ export function ActivitySection({ activities, search }: ActivitySectionProps) {
       <div className="section-heading">
         <div>
           <h2 id="activity-title">Recent activity</h2>
-          <p>A little context from your team.</p>
+          <p>Task discussions and change history.</p>
         </div>
       </div>
       <div className="activity-list" aria-live="polite">
@@ -399,8 +418,16 @@ export function ActivitySection({ activities, search }: ActivitySectionProps) {
           ))
         ) : (
           <EmptyState
-            title="No activity matches your search"
-            message="Try a different name, task, or project."
+            title={
+              activities.length === 0
+                ? "Task history stays with each task"
+                : "No activity matches your search"
+            }
+            message={
+              activities.length === 0
+                ? "Open a task to review its comments and activity."
+                : "Try a different name, task, or project."
+            }
           />
         )}
       </div>

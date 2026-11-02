@@ -172,9 +172,44 @@ Allowed statuses:
 Constraints:
 - token_hash is unique.
 - organization_id must reference an existing organization.
-- inviter_id must reference an existing user if present.
+- inviter_id must reference a membership in the same organization.
 - OWNER cannot be granted through a normal invite.
+- Only a hash of the random invitation token is stored.
+- Active duplicate invitations are prevented with serializable transactions.
 - Additional status values require reviewed schema migrations.
+
+### Notifications
+
+Stores persisted, user-scoped application notifications.
+
+Fields:
+- recipient_id (Foreign Key → users.id)
+- organization_id (Foreign Key → organizations.id)
+- project_id (optional composite Foreign Key → projects)
+- type and related resource type/UUID
+- title, message, event_key
+- read_at (null means unread)
+- created_at
+
+Constraints and access rules:
+- UNIQUE(recipient_id, event_key) makes event publication idempotent.
+- Recipient and organization foreign keys prevent dangling records.
+- The optional project relationship is constrained by both organization_id
+  and project_id, preventing cross-organization resource references.
+- API queries are scoped to the authenticated internal user and re-check active
+  organization/project access before returning project notifications.
+- Invitation notifications are visible only while the matching verified-email
+  user's invitation is pending, unexpired, and its organization is active.
+- Notifications are retained records; users may delete their own notification,
+  but may not access another user's notification.
+- Task/project notifications are inserted in the same Prisma transaction as
+  their source event. Email and other external delivery are not involved.
+
+Invitation tokens expire after seven days. The un-hashed token is returned only
+once when the invitation is created so an authorized Owner or Admin can share
+the link. Team listings never include token material. Accepting an invitation
+atomically marks it accepted and creates or reactivates the matching internal
+NEXUS membership. Removed project memberships remain removed when a user rejoins.
 
 ### Projects
 
@@ -273,12 +308,27 @@ Constraints:
 - Every task must belong to the same organization as its parent project.
 - An assigned user must have active project membership.
 - New assignments require active membership.
-- Assignment history is preserved in audit_logs when membership is removed.
-- Completed task attribution remains intact.
+- The creator must be a member of the task's project.
+- Task archival uses archived_at and never deletes task data.
+- Task mutations and comments are recorded in task_activities.
 - Additional values require reviewed schema migrations.
 
 ### Comments
-Stores discussions associated with tasks.
+
+`task_comments` stores discussions associated with tasks.
+
+Each comment records its organization, project, task, project-member author,
+body, and creation/update timestamps. Composite foreign keys ensure that the
+task and author belong to the same organization and project.
+
+### Task Activity
+
+`task_activities` is an append-only history of task creation, updates, status
+changes, assignment changes, comments, archival, and restoration.
+
+Each entry records its organization, project, task, project-member actor, event
+type, human-readable description, and timestamp. Entries are written in the
+same transaction as the action they describe.
 
 ### Channels
 Stores team communication channels.
@@ -321,11 +371,20 @@ Required composite foreign keys:
   REFERENCES projects(organization_id, id)
 - tasks(organization_id, project_id, assignee_id)
   REFERENCES project_members(organization_id, project_id, user_id)
+- task_comments(organization_id, project_id, task_id)
+  REFERENCES tasks(organization_id, project_id, id)
+- task_comments(organization_id, project_id, author_id)
+  REFERENCES project_members(organization_id, project_id, user_id)
+- task_activities(organization_id, project_id, task_id)
+  REFERENCES tasks(organization_id, project_id, id)
+- task_activities(organization_id, project_id, actor_id)
+  REFERENCES project_members(organization_id, project_id, user_id)
 
 Required uniqueness for composite references:
 - projects: UNIQUE(organization_id, id)
 - organization_memberships: UNIQUE(organization_id, user_id)
 - project_members: UNIQUE(organization_id, project_id, user_id)
+- tasks: UNIQUE(organization_id, project_id, id)
 
 These foreign keys enforce relationship existence and same-organization membership.
 They do not enforce ACTIVE status.

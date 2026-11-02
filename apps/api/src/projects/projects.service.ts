@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   ConflictException,
   ForbiddenException,
@@ -10,6 +11,10 @@ import type {
   ProjectStatus,
 } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma.service.js';
+import {
+  NotificationsService,
+  type NewNotification,
+} from '../notifications/notifications.service.js';
 import type { CreateProjectDto, UpdateProjectDto } from './project.dto.js';
 
 const projectSelect = {
@@ -43,20 +48,36 @@ export interface ProjectResponse {
   canManage: boolean;
 }
 
+export interface ProjectMemberResponse {
+  userId: string;
+  name: string;
+  email: string;
+  role: OrganizationRole;
+}
+
+export interface ProjectMembersResponse {
+  members: ProjectMemberResponse[];
+  availableMembers: ProjectMemberResponse[];
+  canManage: boolean;
+}
+
 type ActiveMembership = {
   role: OrganizationRole;
 };
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(
     organizationId: string,
     userId: string,
     input: CreateProjectDto,
   ): Promise<ProjectResponse> {
-    return this.prisma.$transaction(async (transaction) => {
+    return this.notifications.withTransaction(async (transaction, publish) => {
       const membership = await this.findActiveMembership(
         transaction,
         organizationId,
@@ -81,6 +102,29 @@ export class ProjectsService {
           status: 'ACTIVE',
         },
       });
+
+      const recipients = await transaction.organizationMembership.findMany({
+        where: {
+          organizationId,
+          status: 'ACTIVE',
+          role: { in: ['OWNER', 'ADMIN'] },
+          userId: { not: userId },
+        },
+        select: { userId: true },
+      });
+      await publish(
+        recipients.map(({ userId: recipientId }) => ({
+          recipientId,
+          organizationId,
+          projectId: project.id,
+          type: 'PROJECT_ADDED',
+          title: 'New project created',
+          message: `A new project, "${project.name}", is ready.`,
+          resourceType: 'PROJECT',
+          resourceId: project.id,
+          eventKey: `project-created:${project.id}:${recipientId}`,
+        })),
+      );
 
       return this.toResponse(project, membership.role);
     });
@@ -139,13 +183,196 @@ export class ProjectsService {
     });
   }
 
+  async listMembers(
+    organizationId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectMembersResponse> {
+    return this.prisma.$transaction(async (transaction) => {
+      const membership = await this.findActiveMembership(
+        transaction,
+        organizationId,
+        userId,
+      );
+      await this.findAccessibleProject(
+        transaction,
+        organizationId,
+        projectId,
+        userId,
+        membership.role,
+      );
+
+      const canManage = this.canManage(membership.role);
+      const [members, availableMembers] = await Promise.all([
+        transaction.projectMember.findMany({
+          where: {
+            organizationId,
+            projectId,
+            status: 'ACTIVE',
+            membership: { status: 'ACTIVE' },
+          },
+          select: {
+            userId: true,
+            membership: {
+              select: {
+                role: true,
+                user: { select: { name: true, email: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
+        canManage
+          ? transaction.organizationMembership.findMany({
+              where: {
+                organizationId,
+                status: 'ACTIVE',
+                projectMemberships: {
+                  none: {
+                    projectId,
+                    status: 'ACTIVE',
+                  },
+                },
+              },
+              select: {
+                userId: true,
+                role: true,
+                user: { select: { name: true, email: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      return {
+        members: members.map((member) => ({
+          userId: member.userId,
+          name: member.membership.user.name,
+          email: member.membership.user.email,
+          role: member.membership.role,
+        })),
+        availableMembers: availableMembers.map((member) => ({
+          userId: member.userId,
+          name: member.user.name,
+          email: member.user.email,
+          role: member.role,
+        })),
+        canManage,
+      };
+    });
+  }
+
+  async addMember(
+    organizationId: string,
+    projectId: string,
+    actorId: string,
+    memberUserId: string,
+  ): Promise<ProjectMemberResponse> {
+    return this.prisma.$transaction(async (transaction) => {
+      const membership = await this.findActiveMembership(
+        transaction,
+        organizationId,
+        actorId,
+      );
+      const project = await this.findAccessibleProject(
+        transaction,
+        organizationId,
+        projectId,
+        actorId,
+        membership.role,
+      );
+      this.assertCanManage(membership.role);
+      this.assertProjectIsActive(project.status);
+
+      const targetMembership =
+        await transaction.organizationMembership.findFirst({
+          where: {
+            organizationId,
+            userId: memberUserId,
+            status: 'ACTIVE',
+            organization: { status: 'ACTIVE' },
+          },
+          select: {
+            userId: true,
+            role: true,
+            user: { select: { name: true, email: true } },
+          },
+        });
+      if (!targetMembership) {
+        throw new NotFoundException('Active organization member not found.');
+      }
+
+      await transaction.projectMember.upsert({
+        where: {
+          organizationId_projectId_userId: {
+            organizationId,
+            projectId,
+            userId: memberUserId,
+          },
+        },
+        create: {
+          organizationId,
+          projectId,
+          userId: memberUserId,
+          status: 'ACTIVE',
+        },
+        update: { status: 'ACTIVE' },
+      });
+
+      return {
+        userId: targetMembership.userId,
+        name: targetMembership.user.name,
+        email: targetMembership.user.email,
+        role: targetMembership.role,
+      };
+    });
+  }
+
+  async removeMember(
+    organizationId: string,
+    projectId: string,
+    actorId: string,
+    memberUserId: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const membership = await this.findActiveMembership(
+        transaction,
+        organizationId,
+        actorId,
+      );
+      const project = await this.findAccessibleProject(
+        transaction,
+        organizationId,
+        projectId,
+        actorId,
+        membership.role,
+      );
+      this.assertCanManage(membership.role);
+      this.assertProjectIsActive(project.status);
+
+      const result = await transaction.projectMember.updateMany({
+        where: {
+          organizationId,
+          projectId,
+          userId: memberUserId,
+          status: 'ACTIVE',
+          membership: { status: 'ACTIVE' },
+        },
+        data: { status: 'REMOVED' },
+      });
+      if (result.count !== 1) {
+        throw new NotFoundException('Active project member not found.');
+      }
+    });
+  }
+
   async update(
     organizationId: string,
     projectId: string,
     userId: string,
     input: UpdateProjectDto,
   ): Promise<ProjectResponse> {
-    return this.prisma.$transaction(async (transaction) => {
+    return this.notifications.withTransaction(async (transaction, publish) => {
       const membership = await this.findActiveMembership(
         transaction,
         organizationId,
@@ -179,6 +406,23 @@ export class ProjectsService {
         membership.role,
       );
 
+      if (
+        (input.name !== undefined && input.name !== project.name) ||
+        (input.description !== undefined &&
+          input.description !== project.description)
+      ) {
+        await this.notifyProjectMembers(
+          transaction,
+          publish,
+          organizationId,
+          projectId,
+          userId,
+          randomUUID(),
+          'Project updated',
+          `"${updatedProject.name}" has new project details.`,
+        );
+      }
+
       return this.toResponse(updatedProject, membership.role);
     });
   }
@@ -188,7 +432,7 @@ export class ProjectsService {
     projectId: string,
     userId: string,
   ): Promise<ProjectResponse> {
-    return this.prisma.$transaction(async (transaction) => {
+    return this.notifications.withTransaction(async (transaction, publish) => {
       const membership = await this.findActiveMembership(
         transaction,
         organizationId,
@@ -203,7 +447,8 @@ export class ProjectsService {
       );
       this.assertCanManage(membership.role);
 
-      if (project.status === 'ACTIVE') {
+      const wasActive = project.status === 'ACTIVE';
+      if (wasActive) {
         await transaction.project.updateMany({
           where: {
             id: projectId,
@@ -221,6 +466,18 @@ export class ProjectsService {
         userId,
         membership.role,
       );
+      if (wasActive) {
+        await this.notifyProjectMembers(
+          transaction,
+          publish,
+          organizationId,
+          projectId,
+          userId,
+          randomUUID(),
+          'Project archived',
+          `"${archivedProject.name}" was archived.`,
+        );
+      }
       return this.toResponse(archivedProject, membership.role);
     });
   }
@@ -288,8 +545,55 @@ export class ProjectsService {
     }
   }
 
+  private canManage(role: OrganizationRole): boolean {
+    return role !== 'MEMBER';
+  }
+
+  private assertProjectIsActive(status: ProjectStatus): void {
+    if (status === 'ARCHIVED') {
+      throw new ConflictException(
+        'Archived projects cannot change their members.',
+      );
+    }
+  }
+
   private isOwnerOrAdmin(role: OrganizationRole): boolean {
     return role === 'OWNER' || role === 'ADMIN';
+  }
+
+  private async notifyProjectMembers(
+    transaction: Prisma.TransactionClient,
+    publish: (notifications: NewNotification[]) => Promise<void>,
+    organizationId: string,
+    projectId: string,
+    actorId: string,
+    eventId: string,
+    title: string,
+    message: string,
+  ): Promise<void> {
+    const members = await transaction.projectMember.findMany({
+      where: {
+        organizationId,
+        projectId,
+        userId: { not: actorId },
+        status: 'ACTIVE',
+        membership: { status: 'ACTIVE' },
+      },
+      select: { userId: true },
+    });
+    await publish(
+      members.map(({ userId: recipientId }) => ({
+        recipientId,
+        organizationId,
+        projectId,
+        type: 'PROJECT_UPDATED',
+        title,
+        message,
+        resourceType: 'PROJECT',
+        resourceId: projectId,
+        eventKey: `project-updated:${eventId}:${recipientId}`,
+      })),
+    );
   }
 
   private toResponse(

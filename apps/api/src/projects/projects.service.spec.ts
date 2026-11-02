@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { NewNotification } from '../notifications/notifications.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma.service.js';
 import { ProjectsService } from './projects.service.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,17 +22,41 @@ describe('ProjectsService', () => {
     _count: { tasks: 4, members: 2 },
   };
   const transaction = {
-    organizationMembership: { findFirst: vi.fn() },
+    organizationMembership: { findFirst: vi.fn(), findMany: vi.fn() },
     project: {
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
       updateMany: vi.fn(),
     },
-    projectMember: { create: vi.fn() },
+    projectMember: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    notification: { createMany: vi.fn() },
   };
   const prisma = {
     $transaction: vi.fn(),
+  };
+  const notifications = {
+    withTransaction: vi.fn(
+      async <T>(
+        operation: (
+          tx: typeof transaction,
+          publish: (items: NewNotification[]) => Promise<void>,
+        ) => Promise<T>,
+      ): Promise<T> =>
+        prisma.$transaction((tx: typeof transaction) =>
+          operation(tx, async (items) => {
+            await tx.notification.createMany({
+              data: items,
+              skipDuplicates: true,
+            });
+          }),
+        ),
+    ),
   };
 
   beforeEach(async () => {
@@ -43,6 +69,11 @@ describe('ProjectsService', () => {
     transaction.project.findFirst.mockResolvedValue(project);
     transaction.project.updateMany.mockResolvedValue({ count: 1 });
     transaction.projectMember.create.mockResolvedValue({});
+    transaction.projectMember.upsert.mockResolvedValue({});
+    transaction.projectMember.updateMany.mockResolvedValue({ count: 1 });
+    transaction.organizationMembership.findMany.mockResolvedValue([]);
+    transaction.projectMember.findMany.mockResolvedValue([]);
+    transaction.notification.createMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(
       (operation: (tx: typeof transaction) => Promise<unknown>) =>
         operation(transaction),
@@ -52,6 +83,7 @@ describe('ProjectsService', () => {
       providers: [
         ProjectsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notifications },
       ],
     }).compile();
 
@@ -96,6 +128,29 @@ describe('ProjectsService', () => {
         userId: 'verified-user-id',
         status: 'ACTIVE',
       },
+    });
+  });
+
+  it('notifies other organization Owners and Admins when a project is created', async () => {
+    transaction.organizationMembership.findMany.mockResolvedValue([
+      { userId: 'admin-id' },
+    ]);
+
+    await service.create('organization-id', 'verified-user-id', {
+      name: 'Roadmap',
+    });
+
+    expect(transaction.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          recipientId: 'admin-id',
+          organizationId: 'organization-id',
+          projectId: 'project-id',
+          type: 'PROJECT_ADDED',
+          resourceId: 'project-id',
+        }),
+      ],
+      skipDuplicates: true,
     });
   });
 
@@ -228,6 +283,186 @@ describe('ProjectsService', () => {
       }),
     );
   });
+
+    it('lists active project members and eligible active organization members for managers', async () => {
+      transaction.organizationMembership.findMany.mockResolvedValue([
+        {
+          userId: 'eligible-user-id',
+          role: 'MEMBER',
+          user: { name: 'Eligible Member', email: 'eligible@example.com' },
+        },
+      ]);
+      transaction.projectMember.findMany.mockResolvedValue([
+        {
+          userId: 'current-member-id',
+          membership: {
+            role: 'MANAGER',
+            user: { name: 'Project Manager', email: 'manager@example.com' },
+          },
+        },
+      ]);
+
+      await expect(
+        service.listMembers('organization-id', 'project-id', 'verified-user-id'),
+      ).resolves.toEqual({
+        members: [
+          {
+            userId: 'current-member-id',
+            name: 'Project Manager',
+            email: 'manager@example.com',
+            role: 'MANAGER',
+          },
+        ],
+        availableMembers: [
+          {
+            userId: 'eligible-user-id',
+            name: 'Eligible Member',
+            email: 'eligible@example.com',
+            role: 'MEMBER',
+          },
+        ],
+        canManage: true,
+      });
+
+      expect(transaction.organizationMembership.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            organizationId: 'organization-id',
+            status: 'ACTIVE',
+            projectMemberships: {
+              none: { projectId: 'project-id', status: 'ACTIVE' },
+            },
+          },
+        }),
+      );
+    });
+
+    it('does not disclose the available organization-member list to project Members', async () => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({
+        role: 'MEMBER',
+      });
+      transaction.projectMember.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.listMembers('organization-id', 'project-id', 'verified-user-id'),
+      ).resolves.toMatchObject({ availableMembers: [], canManage: false });
+      expect(transaction.organizationMembership.findMany).not.toHaveBeenCalled();
+    });
+
+    it.each(['OWNER', 'ADMIN', 'MANAGER'] as const)(
+      'allows %s to add or reactivate an active organization member',
+      async (role) => {
+        transaction.organizationMembership.findFirst
+          .mockResolvedValueOnce({ role })
+          .mockResolvedValueOnce({
+            userId: 'eligible-user-id',
+            role: 'MEMBER',
+            user: { name: 'Eligible Member', email: 'eligible@example.com' },
+          });
+
+        await expect(
+          service.addMember(
+            'organization-id',
+            'project-id',
+            'verified-user-id',
+            'eligible-user-id',
+          ),
+        ).resolves.toEqual({
+          userId: 'eligible-user-id',
+          name: 'Eligible Member',
+          email: 'eligible@example.com',
+          role: 'MEMBER',
+        });
+
+        expect(transaction.projectMember.upsert).toHaveBeenCalledWith({
+          where: {
+            organizationId_projectId_userId: {
+              organizationId: 'organization-id',
+              projectId: 'project-id',
+              userId: 'eligible-user-id',
+            },
+          },
+          create: {
+            organizationId: 'organization-id',
+            projectId: 'project-id',
+            userId: 'eligible-user-id',
+            status: 'ACTIVE',
+          },
+          update: { status: 'ACTIVE' },
+        });
+      },
+    );
+
+    it('prevents Members from adding project members', async () => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({
+        role: 'MEMBER',
+      });
+
+      await expect(
+        service.addMember(
+          'organization-id',
+          'project-id',
+          'verified-user-id',
+          'eligible-user-id',
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(transaction.projectMember.upsert).not.toHaveBeenCalled();
+    });
+
+    it('does not add someone without an active membership in this organization', async () => {
+      transaction.organizationMembership.findFirst
+        .mockResolvedValueOnce({ role: 'OWNER' })
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.addMember(
+          'organization-id',
+          'project-id',
+          'verified-user-id',
+          'outside-user-id',
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(transaction.projectMember.upsert).not.toHaveBeenCalled();
+    });
+
+    it('removes membership without deleting the membership record', async () => {
+      await expect(
+        service.removeMember(
+          'organization-id',
+          'project-id',
+          'verified-user-id',
+          'member-user-id',
+        ),
+      ).resolves.toBeUndefined();
+      expect(transaction.projectMember.updateMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'organization-id',
+          projectId: 'project-id',
+          userId: 'member-user-id',
+          status: 'ACTIVE',
+          membership: { status: 'ACTIVE' },
+        },
+        data: { status: 'REMOVED' },
+      });
+      expect(transaction.projectMember).not.toHaveProperty('delete');
+    });
+
+    it('does not allow changing membership on archived projects', async () => {
+      transaction.project.findFirst.mockResolvedValue({
+        ...project,
+        status: 'ARCHIVED',
+      });
+
+      await expect(
+        service.addMember(
+          'organization-id',
+          'project-id',
+          'verified-user-id',
+          'eligible-user-id',
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(transaction.projectMember.upsert).not.toHaveBeenCalled();
+    });
 
   it('allows an assigned Manager to update a project', async () => {
     transaction.organizationMembership.findFirst.mockResolvedValue({

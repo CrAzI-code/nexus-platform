@@ -1,6 +1,7 @@
 "use client";
 
 import { UserButton, useUser } from "@clerk/nextjs";
+import Link from "next/link";
 import { useState } from "react";
 import type { Workspace } from "./dashboard-data";
 import { Icon, type IconName } from "./icons";
@@ -29,7 +30,6 @@ const primaryNavigation: {
 
 const upcomingNavigation: { label: string; icon: IconName }[] = [
   { label: "Messages", icon: "message" },
-  { label: "People", icon: "users" },
   { label: "Settings", icon: "settings" },
 ];
 
@@ -121,6 +121,14 @@ export function DashboardSidebar({
             <span>{item.label}</span>
           </a>
         ))}
+        <Link
+          className="nav-link"
+          href={`/organizations/${encodeURIComponent(workspaceId)}/members`}
+          title="People"
+        >
+          <Icon name="users" width={18} height={18} />
+          <span>People</span>
+        </Link>
         {upcomingNavigation.map((item) => (
           <div
             aria-disabled="true"

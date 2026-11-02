@@ -14,7 +14,14 @@ export class UpdateProjectDto {
   description?: string | null;
 }
 
+export class AddProjectMemberDto {
+  userId!: string;
+}
+
 type ProjectBody = Record<string, unknown>;
+
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isRecord(value: unknown): value is ProjectBody {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -95,5 +102,18 @@ export class UpdateProjectPipe
       project.description = readDescription(body.description);
     }
     return project;
+  }
+}
+
+@Injectable()
+export class AddProjectMemberPipe
+  implements PipeTransform<unknown, AddProjectMemberDto>
+{
+  transform(value: unknown): AddProjectMemberDto {
+    const body = readBody(value, ['userId']);
+    if (typeof body.userId !== 'string' || !uuidPattern.test(body.userId)) {
+      throw new BadRequestException('Choose a valid organization member.');
+    }
+    return { userId: body.userId };
   }
 }

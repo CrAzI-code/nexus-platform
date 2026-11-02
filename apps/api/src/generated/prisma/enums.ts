@@ -90,6 +90,19 @@ export const TaskPriority = {
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
 
 
+export const TaskActivityType = {
+  CREATED: 'CREATED',
+  UPDATED: 'UPDATED',
+  STATUS_CHANGED: 'STATUS_CHANGED',
+  ASSIGNEE_CHANGED: 'ASSIGNEE_CHANGED',
+  COMMENT_ADDED: 'COMMENT_ADDED',
+  ARCHIVED: 'ARCHIVED',
+  RESTORED: 'RESTORED'
+} as const
+
+export type TaskActivityType = (typeof TaskActivityType)[keyof typeof TaskActivityType]
+
+
 export const InvitationStatus = {
   PENDING: 'PENDING',
   ACCEPTED: 'ACCEPTED',
@@ -98,3 +111,27 @@ export const InvitationStatus = {
 } as const
 
 export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus]
+
+
+export const NotificationType = {
+  TASK_ASSIGNED: 'TASK_ASSIGNED',
+  TASK_COMMENT: 'TASK_COMMENT',
+  TASK_MENTION: 'TASK_MENTION',
+  TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
+  PROJECT_ADDED: 'PROJECT_ADDED',
+  PROJECT_UPDATED: 'PROJECT_UPDATED',
+  ORGANIZATION_INVITATION: 'ORGANIZATION_INVITATION',
+  TEAM_UPDATED: 'TEAM_UPDATED'
+} as const
+
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]
+
+
+export const NotificationResourceType = {
+  TASK: 'TASK',
+  PROJECT: 'PROJECT',
+  ORGANIZATION_INVITATION: 'ORGANIZATION_INVITATION',
+  ORGANIZATION: 'ORGANIZATION'
+} as const
+
+export type NotificationResourceType = (typeof NotificationResourceType)[keyof typeof NotificationResourceType]

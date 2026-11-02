@@ -4,7 +4,6 @@ import { useAuth } from "@clerk/nextjs";
 import { useEffect, useMemo, useState } from "react";
 import {
   initialActivity,
-  initialTasks,
   type Activity,
   type Task,
   type Workspace,
@@ -18,6 +17,7 @@ import {
 } from "./dashboard-sections";
 import { Icon } from "./icons";
 import { ProjectDialog } from "./project-dialog";
+import { NotificationCenter } from "./notification-center";
 import {
   archiveProject,
   createProject,
@@ -26,6 +26,7 @@ import {
   type OrganizationProject,
   type ProjectInput,
 } from "@/lib/organizations";
+import { listProjectTasks, TaskApiError } from "@/lib/tasks";
 
 const EMPTY_PROJECTS: OrganizationProject[] = [];
 
@@ -34,10 +35,8 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
   const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? "");
   const [activeSection, setActiveSection] = useState<DashboardSection>("home");
   const [search, setSearch] = useState("");
-  const [tasks] = useState<Task[]>(initialTasks);
   const [activities] = useState<Activity[]>(initialActivity);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
   const [projectLoad, setProjectLoad] = useState<{
     organizationId: string;
     projects: OrganizationProject[];
@@ -48,15 +47,22 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
   >(null);
   const [projectNotice, setProjectNotice] = useState<string | null>(null);
   const [projectRetry, setProjectRetry] = useState(0);
+  const [taskRetry, setTaskRetry] = useState(0);
+  const [taskLoad, setTaskLoad] = useState<{
+    organizationId: string;
+    tasks: Task[];
+    error: string | null;
+  }>({ organizationId: "", tasks: [], error: null });
 
   const workspace = workspaces.find((item) => item.id === workspaceId) ?? workspaces[0];
   const isProjectsLoading = projectLoad.organizationId !== workspaceId;
   const projects = isProjectsLoading ? EMPTY_PROJECTS : projectLoad.projects;
   const projectsError = isProjectsLoading ? null : projectLoad.error;
-  const currentTasks = useMemo(
-    () => tasks.filter((task) => task.workspaceId === workspaceId),
-    [tasks, workspaceId],
-  );
+  const isTasksLoading = isProjectsLoading || taskLoad.organizationId !== workspaceId;
+  const currentTasks =
+    taskLoad.organizationId === workspaceId ? taskLoad.tasks : [];
+  const tasksError =
+    taskLoad.organizationId === workspaceId ? taskLoad.error : null;
   const currentActivities = useMemo(
     () => activities.filter((activity) => activity.workspaceId === workspaceId),
     [activities, workspaceId],
@@ -100,6 +106,67 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
       active = false;
     };
   }, [getToken, projectRetry, workspaceId]);
+
+  useEffect(() => {
+    if (isProjectsLoading) return;
+    let active = true;
+
+    async function loadTasks() {
+      try {
+        const token = await getToken();
+        if (!token) {
+          throw new Error("Your session is unavailable. Sign in again to continue.");
+        }
+        const projectTasks = await Promise.all(
+          projects.map(async (project) => {
+            try {
+              return await listProjectTasks(token, workspaceId, project.id);
+            } catch (requestError) {
+              if (requestError instanceof TaskApiError && requestError.status === 404) {
+                return [];
+              }
+              throw requestError;
+            }
+          }),
+        );
+        if (active) {
+          setTaskLoad({
+            organizationId: workspaceId,
+            tasks: projectTasks
+              .flat()
+              .filter((task) => !task.archivedAt)
+              .map((task) => ({
+                id: task.id,
+                workspaceId,
+                projectId: task.projectId,
+                title: task.title,
+                status: task.status,
+                priority: task.priority,
+                dueDate: task.dueAt?.slice(0, 10) ?? null,
+                archivedAt: task.archivedAt,
+              })),
+            error: null,
+          });
+        }
+      } catch (requestError) {
+        if (active) {
+          setTaskLoad({
+            organizationId: workspaceId,
+            tasks: [],
+            error:
+              requestError instanceof Error
+                ? requestError.message
+                : "We couldn’t load tasks. Please try again.",
+          });
+        }
+      }
+    }
+
+    void loadTasks();
+    return () => {
+      active = false;
+    };
+  }, [getToken, isProjectsLoading, projects, taskRetry, workspaceId]);
 
   useEffect(() => {
     if (!projectNotice) return;
@@ -171,11 +238,6 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
     workspace.role === "OWNER" ||
     workspace.role === "ADMIN" ||
     workspace.role === "MANAGER";
-  const taskProjects = useMemo(
-    () => projects.map(({ id, name }) => ({ id, name })),
-    [projects],
-  );
-
   return (
     <div className="dashboard-shell" id="home">
       <DashboardSidebar
@@ -205,52 +267,10 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
                   value={search}
                 />
               </label>
-              <div className="notification-wrap">
-                <button
-                  aria-expanded={isNotificationsOpen}
-                  aria-label="Notifications"
-                  className="icon-button"
-                  onClick={() => setIsNotificationsOpen((open) => !open)}
-                  type="button"
-                >
-                  <Icon name="bell" width={18} height={18} />
-                  {hasUnreadNotifications && <span className="notification-dot" />}
-                </button>
-                {isNotificationsOpen && (
-                  <div className="notification-popover" role="region" aria-label="Notifications">
-                    <div className="popover-heading">
-                      <strong>Notifications</strong>
-                      {hasUnreadNotifications && (
-                        <button
-                          className="text-button"
-                          onClick={() => setHasUnreadNotifications(false)}
-                          type="button"
-                        >
-                          Mark all as read
-                        </button>
-                      )}
-                    </div>
-                    {hasUnreadNotifications ? (
-                      <div className="notification-item">
-                        <span className="notification-bullet" />
-                        {workspaceId === "nexus" ? (
-                          <p>
-                            Jordan mentioned you in <strong>Onboarding flow</strong>
-                            <span>Mobile app redesign · 48 minutes ago</span>
-                          </p>
-                        ) : (
-                          <p>
-                            Maya shared new notes in <strong>Activation interviews</strong>
-                            <span>Customer research · 20 minutes ago</span>
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="notification-empty">You&apos;re all caught up.</p>
-                    )}
-                  </div>
-                )}
-              </div>
+              <NotificationCenter
+                isOpen={isNotificationsOpen}
+                onOpenChange={setIsNotificationsOpen}
+              />
               {canCreateProject && (
                 <button
                   className="primary-button"
@@ -263,11 +283,6 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
               )}
             </div>
           </header>
-
-          <p className="mock-notice">
-            <Icon name="info" width={14} height={14} />
-            Projects are connected to your organization. Tasks and activity are not part of this milestone.
-          </p>
 
           <OverviewSection tasks={currentTasks} />
 
@@ -288,7 +303,11 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
               <TasksSection
                 key={workspaceId}
                 onClearSearch={() => setSearch("")}
-                projects={taskProjects}
+                error={tasksError}
+                isLoading={isTasksLoading}
+                onRetry={() => setTaskRetry((value) => value + 1)}
+                organizationId={workspaceId}
+                projects={projects}
                 search={search}
                 tasks={currentTasks}
               />

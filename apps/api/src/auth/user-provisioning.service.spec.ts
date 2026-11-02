@@ -11,13 +11,20 @@ describe('UserProvisioningService', () => {
     id: 'user_123',
     fullName: 'Casey Developer',
     username: 'casey',
-    primaryEmailAddress: { emailAddress: 'casey@example.com' },
+    primaryEmailAddress: {
+      emailAddress: 'casey@example.com',
+      verification: { status: 'verified' },
+    },
   };
   const internalUser = {
     id: 'internal-user-id',
     name: 'Casey Developer',
     email: 'casey@example.com',
     status: 'ACTIVE',
+  };
+  const authenticatedUser = {
+    ...internalUser,
+    primaryEmailVerified: true,
   };
   const transaction = {
     authIdentity: {
@@ -63,7 +70,9 @@ describe('UserProvisioningService', () => {
   });
 
   it('creates a NEXUS user and Clerk identity in the same transaction', async () => {
-    await expect(service.provision('user_123')).resolves.toEqual(internalUser);
+    await expect(service.provision('user_123')).resolves.toEqual(
+      authenticatedUser,
+    );
 
     expect(clerkBackend.getUser).toHaveBeenCalledWith('user_123');
     expect(transaction.user.create).toHaveBeenCalledWith({
@@ -84,7 +93,9 @@ describe('UserProvisioningService', () => {
       userId: 'internal-user-id',
     });
 
-    await expect(service.provision('user_123')).resolves.toEqual(internalUser);
+    await expect(service.provision('user_123')).resolves.toEqual(
+      authenticatedUser,
+    );
 
     expect(transaction.user.update).toHaveBeenCalledWith({
       where: { id: 'internal-user-id' },
@@ -93,6 +104,21 @@ describe('UserProvisioningService', () => {
     });
     expect(transaction.user.create).not.toHaveBeenCalled();
     expect(transaction.authIdentity.create).not.toHaveBeenCalled();
+  });
+
+  it('marks an unverified primary email without treating it as verified', async () => {
+    clerkBackend.getUser.mockResolvedValue({
+      ...clerkUser,
+      primaryEmailAddress: {
+        emailAddress: 'casey@example.com',
+        verification: { status: 'unverified' },
+      },
+    });
+
+    await expect(service.provision('user_123')).resolves.toMatchObject({
+      ...internalUser,
+      primaryEmailVerified: false,
+    });
   });
 
   it('recovers from a concurrent identity insert without leaving a duplicate user', async () => {
@@ -110,7 +136,9 @@ describe('UserProvisioningService', () => {
       userId: 'internal-user-id',
     });
 
-    await expect(service.provision('user_123')).resolves.toEqual(internalUser);
+    await expect(service.provision('user_123')).resolves.toEqual(
+      authenticatedUser,
+    );
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(transaction.user.create).not.toHaveBeenCalled();
