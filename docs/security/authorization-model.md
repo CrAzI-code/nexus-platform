@@ -212,6 +212,22 @@ Cross-organization access must be denied.
 - Notification links are built from validated resource types and IDs and never
   contain task, Clerk, or invitation tokens.
 
+## 8.2 Audit Logs
+
+- Audit retrieval is scoped to the organization ID in the route and requires
+  the authenticated user to have an active OWNER or ADMIN membership in that
+  organization.
+- Managers, Members, inactive memberships, and users from other organizations
+  cannot retrieve the records.
+- Actor IDs always come from the verified session; clients cannot provide or
+  override audit actor attribution.
+- Filter inputs are validated and are always combined with the organization
+  scope. Pagination never removes that tenant predicate.
+- Audit entries are created inside the transaction for the business operation.
+  Failure to persist the audit row rolls back the operation.
+- No ordinary update/delete endpoints are exposed. Snapshots exclude invitation
+  tokens, email addresses, comments, credentials, and session information.
+
 ## 9. Authorization Enforcement
 
 All authorization checks must happen

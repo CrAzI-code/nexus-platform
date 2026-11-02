@@ -31,10 +31,13 @@ describe('ProjectsService', () => {
     },
     projectMember: {
       create: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
       findMany: vi.fn(),
       upsert: vi.fn(),
       updateMany: vi.fn(),
     },
+    auditLog: { create: vi.fn() },
     notification: { createMany: vi.fn() },
   };
   const prisma = {
@@ -69,8 +72,17 @@ describe('ProjectsService', () => {
     transaction.project.findFirst.mockResolvedValue(project);
     transaction.project.updateMany.mockResolvedValue({ count: 1 });
     transaction.projectMember.create.mockResolvedValue({});
-    transaction.projectMember.upsert.mockResolvedValue({});
+    transaction.projectMember.findFirst.mockResolvedValue({
+      id: 'project-member-id',
+      status: 'ACTIVE',
+    });
+    transaction.projectMember.findUnique.mockResolvedValue(null);
+    transaction.projectMember.upsert.mockResolvedValue({
+      id: 'project-member-id',
+      status: 'ACTIVE',
+    });
     transaction.projectMember.updateMany.mockResolvedValue({ count: 1 });
+    transaction.auditLog.create.mockResolvedValue({ id: 'audit-log-id' });
     transaction.organizationMembership.findMany.mockResolvedValue([]);
     transaction.projectMember.findMany.mockResolvedValue([]);
     transaction.notification.createMany.mockResolvedValue({ count: 1 });
@@ -129,6 +141,17 @@ describe('ProjectsService', () => {
         status: 'ACTIVE',
       },
     });
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'organization-id',
+          actorId: 'verified-user-id',
+          action: 'PROJECT_CREATED',
+          targetType: 'PROJECT',
+          targetId: 'project-id',
+        }),
+      }),
+    );
   });
 
   it('notifies other organization Owners and Admins when a project is created', async () => {
@@ -389,7 +412,18 @@ describe('ProjectsService', () => {
             status: 'ACTIVE',
           },
           update: { status: 'ACTIVE' },
+          select: { id: true, status: true },
         });
+        expect(transaction.auditLog.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              organizationId: 'organization-id',
+              actorId: 'verified-user-id',
+              action: 'PROJECT_MEMBER_ADDED',
+              targetType: 'PROJECT_MEMBER',
+            }),
+          }),
+        );
       },
     );
 
@@ -407,6 +441,29 @@ describe('ProjectsService', () => {
         ),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(transaction.projectMember.upsert).not.toHaveBeenCalled();
+    });
+
+    it('does not create another audit event when the member is already active', async () => {
+      transaction.organizationMembership.findFirst
+        .mockResolvedValueOnce({ role: 'OWNER' })
+        .mockResolvedValueOnce({
+          userId: 'eligible-user-id',
+          role: 'MEMBER',
+          user: { name: 'Eligible Member', email: 'eligible@example.com' },
+        });
+      transaction.projectMember.findUnique.mockResolvedValue({
+        id: 'project-member-id',
+        status: 'ACTIVE',
+      });
+
+      await service.addMember(
+        'organization-id',
+        'project-id',
+        'verified-user-id',
+        'eligible-user-id',
+      );
+
+      expect(transaction.auditLog.create).not.toHaveBeenCalled();
     });
 
     it('does not add someone without an active membership in this organization', async () => {
@@ -445,6 +502,15 @@ describe('ProjectsService', () => {
         data: { status: 'REMOVED' },
       });
       expect(transaction.projectMember).not.toHaveProperty('delete');
+      expect(transaction.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            actorId: 'verified-user-id',
+            action: 'PROJECT_MEMBER_REMOVED',
+            targetId: 'project-member-id',
+          }),
+        }),
+      );
     });
 
     it('does not allow changing membership on archived projects', async () => {
@@ -468,6 +534,9 @@ describe('ProjectsService', () => {
     transaction.organizationMembership.findFirst.mockResolvedValue({
       role: 'MANAGER',
     });
+    transaction.project.findFirst
+      .mockResolvedValueOnce(project)
+      .mockResolvedValueOnce({ ...project, name: 'Updated Roadmap' });
     transaction.project.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(
@@ -481,9 +550,22 @@ describe('ProjectsService', () => {
         id: 'project-id',
         organizationId: 'organization-id',
         status: 'ACTIVE',
+        name: 'Roadmap',
       },
       data: { name: 'Updated Roadmap' },
     });
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'organization-id',
+          actorId: 'verified-user-id',
+          action: 'PROJECT_UPDATED',
+          targetId: 'project-id',
+          before: { name: 'Roadmap' },
+          after: { name: 'Updated Roadmap' },
+        }),
+      }),
+    );
   });
 
   it('prevents an assigned Member from updating a project', async () => {
@@ -513,6 +595,42 @@ describe('ProjectsService', () => {
       data: { status: 'ARCHIVED' },
     });
     expect(transaction.project).not.toHaveProperty('delete');
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'PROJECT_ARCHIVED',
+          actorId: 'verified-user-id',
+          targetId: 'project-id',
+        }),
+      }),
+    );
+  });
+
+  it('restores an archived project and audits the state transition', async () => {
+    transaction.project.findFirst
+      .mockResolvedValueOnce({ ...project, status: 'ARCHIVED' })
+      .mockResolvedValueOnce(project);
+
+    await expect(
+      service.restore('organization-id', 'project-id', 'verified-user-id'),
+    ).resolves.toMatchObject({ status: 'ACTIVE' });
+
+    expect(transaction.project.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'ARCHIVED' }),
+        data: { status: 'ACTIVE' },
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'PROJECT_RESTORED',
+          actorId: 'verified-user-id',
+          before: { status: 'ARCHIVED' },
+          after: { status: 'ACTIVE' },
+        }),
+      }),
+    );
   });
 
   it('does not change archived projects on repeated archive requests', async () => {

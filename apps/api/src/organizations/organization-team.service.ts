@@ -13,6 +13,7 @@ import type {
   OrganizationRole,
 } from '../generated/prisma/client.js';
 import type { EmailDeliveryStatus } from '../email/email.types.js';
+import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import { PrismaService } from '../prisma.service.js';
 import type { UpdateMemberRoleDto } from './team.dto.js';
 import {
@@ -249,6 +250,14 @@ export class OrganizationTeamService {
         },
         select: invitationSelect,
       });
+      await AuditLogsService.record(transaction, {
+        organizationId,
+        actorId: userId,
+        action: 'INVITATION_CREATED',
+        targetType: 'INVITATION',
+        targetId: invitation.id,
+        after: { role, status: 'PENDING' },
+      });
 
       const invitee = await transaction.user.findFirst({
         where: {
@@ -319,6 +328,15 @@ export class OrganizationTeamService {
           'This invitation is no longer available to revoke.',
         );
       }
+      await AuditLogsService.record(transaction, {
+        organizationId,
+        actorId: userId,
+        action: 'INVITATION_REVOKED',
+        targetType: 'INVITATION',
+        targetId: invitation.id,
+        before: { status: 'PENDING' },
+        after: { status: 'REVOKED' },
+      });
       return this.toInvitationResponse(invitation, 'REVOKED');
     });
   }
@@ -348,7 +366,7 @@ export class OrganizationTeamService {
           organizationId,
           userId: memberUserId,
           status: 'ACTIVE',
-          role: { not: 'OWNER' },
+          role: member.role,
         },
         data: { role: input.role },
       });
@@ -375,6 +393,17 @@ export class OrganizationTeamService {
             eventKey: `team-role:${randomUUID()}`,
           },
         ]);
+      }
+      if (member.role !== input.role) {
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: actorUserId,
+          action: 'ORGANIZATION_MEMBER_ROLE_CHANGED',
+          targetType: 'ORGANIZATION_MEMBER',
+          targetId: memberUserId,
+          before: { role: member.role },
+          after: { role: input.role },
+        });
       }
       return this.toMemberResponse(updatedMember);
     });
@@ -413,6 +442,24 @@ export class OrganizationTeamService {
           'This membership changed before it could be removed.',
         );
       }
+      await AuditLogsService.record(transaction, {
+        organizationId,
+        actorId: actorUserId,
+        action: 'ORGANIZATION_MEMBER_REMOVED',
+        targetType: 'ORGANIZATION_MEMBER',
+        targetId: memberUserId,
+        before: { role: member.role, status: 'ACTIVE' },
+        after: { status: 'REMOVED' },
+      });
+      const activeProjectMemberships =
+        await transaction.projectMember.findMany({
+          where: {
+            organizationId,
+            userId: memberUserId,
+            status: 'ACTIVE',
+          },
+          select: { id: true, status: true },
+        });
       await transaction.projectMember.updateMany({
         where: {
           organizationId,
@@ -421,6 +468,17 @@ export class OrganizationTeamService {
         },
         data: { status: 'REMOVED' },
       });
+      for (const projectMembership of activeProjectMemberships) {
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: actorUserId,
+          action: 'PROJECT_MEMBER_REMOVED',
+          targetType: 'PROJECT_MEMBER',
+          targetId: projectMembership.id,
+          before: { status: projectMembership.status },
+          after: { status: 'REMOVED' },
+        });
+      }
 
       if (memberUserId !== actorUserId) {
         await publish([
@@ -633,6 +691,15 @@ export class OrganizationTeamService {
         role: invitation.intendedRole,
         status: 'ACTIVE',
       },
+    });
+    await AuditLogsService.record(transaction, {
+      organizationId: invitation.organizationId,
+      actorId: userId,
+      action: 'INVITATION_ACCEPTED',
+      targetType: 'INVITATION',
+      targetId: invitation.id,
+      before: { status: 'PENDING' },
+      after: { status: 'ACCEPTED', role: invitation.intendedRole },
     });
 
     return {
