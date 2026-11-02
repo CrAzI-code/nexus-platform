@@ -87,6 +87,16 @@ export type TaskComment = Prisma.TaskCommentModel
  */
 export type TaskActivity = Prisma.TaskActivityModel
 /**
+ * Model FileAttachment
+ *
+ */
+export type FileAttachment = Prisma.FileAttachmentModel
+/**
+ * Model TaskFileAttachment
+ *
+ */
+export type TaskFileAttachment = Prisma.TaskFileAttachmentModel
+/**
  * Model Invitation
  *
  */

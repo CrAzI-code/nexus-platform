@@ -233,6 +233,25 @@ read-only, paginated retrieval to organization Owners and Admins and provides
 no update or delete endpoint. Audit retention and privileged database-level
 tamper controls remain operational concerns.
 
+### File Attachments
+
+Stores metadata for private files associated with a project and, optionally,
+one task.
+
+Fields:
+- organization_id and project_id (composite foreign key to projects)
+- uploaded_by_id (composite foreign key to organization_memberships)
+- storage_key (unique generated key; never a user-supplied filename)
+- original_name, mime_type, size_bytes
+- created_at and removed_at (soft removal)
+
+Task attachments use `task_file_attachments`, whose composite foreign keys
+require the task and file to share the same organization and project. The file
+metadata table is indexed by organization, project, removal state, and creation
+time for tenant-scoped listing. File bytes are stored outside PostgreSQL in a
+private storage provider; the database contains no content blobs. Removed
+records remain for history and cannot be listed or downloaded.
+
 Invitation tokens expire after seven days. The un-hashed token is returned only
 once when the invitation is created so an authorized Owner or Admin can share
 the link. Team listings never include token material. Accepting an invitation

@@ -192,3 +192,23 @@ contain minimal non-secret values; raw invitation tokens, email addresses,
 comments, and authentication credentials are excluded. Audit rows are
 append-only through the application API, with no ordinary update or delete
 endpoint.
+
+Project files and task attachments use authenticated, project-scoped API routes.
+The API exposes paginated project-file and task-attachment list/upload routes,
+plus authenticated content and removal routes under the parent project.
+File bytes are stored outside the web application's public directory behind a
+storage-provider interface; PostgreSQL stores only metadata and tenant-scoped
+relationships. The local provider uses generated UUID keys and private
+filesystem permissions. Upload validation checks the extension, declared MIME
+type, and actual file contents. Active project members may upload, download,
+and list files in projects they can access; uploaders may remove their own
+files, while project Managers and organization Owners/Admins may remove any
+project file. File metadata and audit events are committed together; removal
+soft-deletes the metadata before private bytes are cleaned up.
+
+The local provider is intended for development or a single API instance with
+persistent private disk. Production deployment needs durable, access-controlled
+storage shared by API instances, encryption at rest, backup and retention
+policies, malware scanning, and cleanup for orphaned objects. The provider
+interface allows a future S3-compatible implementation without storing file
+contents in PostgreSQL.

@@ -114,6 +114,8 @@ enum AuditLogAction {
   TASK_STATUS_CHANGED
   TASK_ARCHIVED
   TASK_RESTORED
+  FILE_UPLOADED
+  FILE_REMOVED
 }
 
 enum AuditLogTargetType {
@@ -122,6 +124,7 @@ enum AuditLogTargetType {
   PROJECT
   PROJECT_MEMBER
   TASK
+  FILE_ATTACHMENT
 }
 
 model User {
@@ -185,6 +188,7 @@ model OrganizationMembership {
 
   projectMemberships ProjectMember[]
   sentInvitations    Invitation[]    @relation("InvitationInviterMembership")
+  uploadedFiles      FileAttachment[] @relation("FileUploaderMembership")
 
   @@unique([organizationId, userId])
   @@unique([organizationId], where: { role: "OWNER", status: "ACTIVE" }, map: "organization_memberships_one_active_owner")
@@ -206,6 +210,7 @@ model Project {
   members ProjectMember[]
   tasks   Task[]
   notifications Notification[]
+  files   FileAttachment[]
 
   @@unique([organizationId, id])
   @@index([organizationId, status])
@@ -256,6 +261,7 @@ model Task {
   assignee   ProjectMember? @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
   comments   TaskComment[]
   activities TaskActivity[]
+  fileAttachments TaskFileAttachment[]
 
   @@unique([organizationId, projectId, id])
   @@index([organizationId, projectId, status])
@@ -296,6 +302,41 @@ model TaskActivity {
 
   @@index([organizationId, projectId, taskId, createdAt])
   @@map("task_activities")
+}
+
+model FileAttachment {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  projectId      String    @map("project_id") @db.Uuid
+  uploadedById   String    @map("uploaded_by_id") @db.Uuid
+  storageKey     String    @unique @map("storage_key") @db.VarChar(36)
+  originalName   String    @map("original_name") @db.VarChar(255)
+  mimeType       String    @map("mime_type") @db.VarChar(100)
+  sizeBytes      Int       @map("size_bytes")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  removedAt      DateTime? @map("removed_at") @db.Timestamptz
+
+  project            Project                 @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  uploaderMembership OrganizationMembership @relation("FileUploaderMembership", fields: [organizationId, uploadedById], references: [organizationId, userId], onDelete: Restrict)
+  taskAttachment     TaskFileAttachment?
+
+  @@unique([organizationId, projectId, id])
+  @@index([organizationId, projectId, removedAt, createdAt(sort: Desc)])
+  @@map("file_attachments")
+}
+
+model TaskFileAttachment {
+  organizationId String @map("organization_id") @db.Uuid
+  projectId      String @map("project_id") @db.Uuid
+  taskId         String @map("task_id") @db.Uuid
+  fileId         String @map("file_id") @db.Uuid
+
+  task Task           @relation(fields: [organizationId, projectId, taskId], references: [organizationId, projectId, id], onDelete: Restrict)
+  file FileAttachment @relation(fields: [organizationId, projectId, fileId], references: [organizationId, projectId, id], onDelete: Restrict)
+
+  @@id([organizationId, projectId, fileId])
+  @@index([organizationId, projectId, taskId])
+  @@map("task_file_attachments")
 }
 
 model Invitation {

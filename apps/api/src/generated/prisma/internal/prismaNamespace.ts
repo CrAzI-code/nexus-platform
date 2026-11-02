@@ -406,6 +406,8 @@ export const ModelName = {
   Task: 'Task',
   TaskComment: 'TaskComment',
   TaskActivity: 'TaskActivity',
+  FileAttachment: 'FileAttachment',
+  TaskFileAttachment: 'TaskFileAttachment',
   Invitation: 'Invitation',
   Notification: 'Notification',
   AuditLog: 'AuditLog'
@@ -424,7 +426,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authIdentity" | "organization" | "organizationMembership" | "project" | "projectMember" | "task" | "taskComment" | "taskActivity" | "invitation" | "notification" | "auditLog"
+    modelProps: "user" | "authIdentity" | "organization" | "organizationMembership" | "project" | "projectMember" | "task" | "taskComment" | "taskActivity" | "fileAttachment" | "taskFileAttachment" | "invitation" | "notification" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1094,6 +1096,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    FileAttachment: {
+      payload: Prisma.$FileAttachmentPayload<ExtArgs>
+      fields: Prisma.FileAttachmentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.FileAttachmentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.FileAttachmentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+        }
+        findFirst: {
+          args: Prisma.FileAttachmentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.FileAttachmentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+        }
+        findMany: {
+          args: Prisma.FileAttachmentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>[]
+        }
+        create: {
+          args: Prisma.FileAttachmentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+        }
+        createMany: {
+          args: Prisma.FileAttachmentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.FileAttachmentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>[]
+        }
+        delete: {
+          args: Prisma.FileAttachmentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+        }
+        update: {
+          args: Prisma.FileAttachmentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+        }
+        deleteMany: {
+          args: Prisma.FileAttachmentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.FileAttachmentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.FileAttachmentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>[]
+        }
+        upsert: {
+          args: Prisma.FileAttachmentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FileAttachmentPayload>
+        }
+        aggregate: {
+          args: Prisma.FileAttachmentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateFileAttachment>
+        }
+        groupBy: {
+          args: Prisma.FileAttachmentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FileAttachmentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.FileAttachmentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FileAttachmentCountAggregateOutputType> | number
+        }
+      }
+    }
+    TaskFileAttachment: {
+      payload: Prisma.$TaskFileAttachmentPayload<ExtArgs>
+      fields: Prisma.TaskFileAttachmentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TaskFileAttachmentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TaskFileAttachmentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>
+        }
+        findFirst: {
+          args: Prisma.TaskFileAttachmentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TaskFileAttachmentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>
+        }
+        findMany: {
+          args: Prisma.TaskFileAttachmentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>[]
+        }
+        create: {
+          args: Prisma.TaskFileAttachmentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>
+        }
+        createMany: {
+          args: Prisma.TaskFileAttachmentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TaskFileAttachmentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>[]
+        }
+        delete: {
+          args: Prisma.TaskFileAttachmentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>
+        }
+        update: {
+          args: Prisma.TaskFileAttachmentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>
+        }
+        deleteMany: {
+          args: Prisma.TaskFileAttachmentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TaskFileAttachmentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TaskFileAttachmentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>[]
+        }
+        upsert: {
+          args: Prisma.TaskFileAttachmentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskFileAttachmentPayload>
+        }
+        aggregate: {
+          args: Prisma.TaskFileAttachmentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTaskFileAttachment>
+        }
+        groupBy: {
+          args: Prisma.TaskFileAttachmentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TaskFileAttachmentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TaskFileAttachmentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TaskFileAttachmentCountAggregateOutputType> | number
+        }
+      }
+    }
     Invitation: {
       payload: Prisma.$InvitationPayload<ExtArgs>
       fields: Prisma.InvitationFieldRefs
@@ -1476,6 +1626,32 @@ export const TaskActivityScalarFieldEnum = {
 export type TaskActivityScalarFieldEnum = (typeof TaskActivityScalarFieldEnum)[keyof typeof TaskActivityScalarFieldEnum]
 
 
+export const FileAttachmentScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  uploadedById: 'uploadedById',
+  storageKey: 'storageKey',
+  originalName: 'originalName',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt',
+  removedAt: 'removedAt'
+} as const
+
+export type FileAttachmentScalarFieldEnum = (typeof FileAttachmentScalarFieldEnum)[keyof typeof FileAttachmentScalarFieldEnum]
+
+
+export const TaskFileAttachmentScalarFieldEnum = {
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  taskId: 'taskId',
+  fileId: 'fileId'
+} as const
+
+export type TaskFileAttachmentScalarFieldEnum = (typeof TaskFileAttachmentScalarFieldEnum)[keyof typeof TaskFileAttachmentScalarFieldEnum]
+
+
 export const InvitationScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -1728,6 +1904,20 @@ export type ListEnumTaskActivityTypeFieldRefInput<$PrismaModel> = FieldRefInputT
 
 
 /**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+
+
+
+/**
  * Reference to a field of type 'InvitationRole'
  */
 export type EnumInvitationRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'InvitationRole'>
@@ -1826,16 +2016,16 @@ export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prisma
 
 
 /**
- * Reference to a field of type 'Int'
+ * Reference to a field of type 'Float'
  */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
 
 
 
 /**
- * Reference to a field of type 'Int[]'
+ * Reference to a field of type 'Float[]'
  */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
 
 
 /**
@@ -1998,6 +2188,8 @@ export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
   taskComment?: Prisma.TaskCommentOmit
   taskActivity?: Prisma.TaskActivityOmit
+  fileAttachment?: Prisma.FileAttachmentOmit
+  taskFileAttachment?: Prisma.TaskFileAttachmentOmit
   invitation?: Prisma.InvitationOmit
   notification?: Prisma.NotificationOmit
   auditLog?: Prisma.AuditLogOmit

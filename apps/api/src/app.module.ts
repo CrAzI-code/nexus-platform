@@ -8,6 +8,7 @@ import { ProjectsModule } from './projects/projects.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
+import { FilesModule } from './files/files.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
     TasksModule,
     NotificationsModule,
     AuditLogsModule,
+    FilesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

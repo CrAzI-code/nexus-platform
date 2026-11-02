@@ -29,3 +29,6 @@ Thumbs.db
 # Local cache
 .cache/
 .turbo/
+
+# Private API uploads
+/apps/api/private-files/

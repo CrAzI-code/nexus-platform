@@ -60,6 +60,8 @@ export const ModelName = {
   Task: 'Task',
   TaskComment: 'TaskComment',
   TaskActivity: 'TaskActivity',
+  FileAttachment: 'FileAttachment',
+  TaskFileAttachment: 'TaskFileAttachment',
   Invitation: 'Invitation',
   Notification: 'Notification',
   AuditLog: 'AuditLog'
@@ -200,6 +202,32 @@ export const TaskActivityScalarFieldEnum = {
 } as const
 
 export type TaskActivityScalarFieldEnum = (typeof TaskActivityScalarFieldEnum)[keyof typeof TaskActivityScalarFieldEnum]
+
+
+export const FileAttachmentScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  uploadedById: 'uploadedById',
+  storageKey: 'storageKey',
+  originalName: 'originalName',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  createdAt: 'createdAt',
+  removedAt: 'removedAt'
+} as const
+
+export type FileAttachmentScalarFieldEnum = (typeof FileAttachmentScalarFieldEnum)[keyof typeof FileAttachmentScalarFieldEnum]
+
+
+export const TaskFileAttachmentScalarFieldEnum = {
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  taskId: 'taskId',
+  fileId: 'fileId'
+} as const
+
+export type TaskFileAttachmentScalarFieldEnum = (typeof TaskFileAttachmentScalarFieldEnum)[keyof typeof TaskFileAttachmentScalarFieldEnum]
 
 
 export const InvitationScalarFieldEnum = {

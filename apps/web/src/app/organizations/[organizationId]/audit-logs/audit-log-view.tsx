@@ -32,6 +32,8 @@ const actionLabels: Record<AuditLogAction, string> = {
   TASK_STATUS_CHANGED: "changed task status",
   TASK_ARCHIVED: "archived a task",
   TASK_RESTORED: "restored a task",
+  FILE_UPLOADED: "uploaded a file",
+  FILE_REMOVED: "removed a file",
 };
 
 const actionOptions = Object.entries(actionLabels) as [
@@ -44,6 +46,7 @@ const targetOptions: { value: AuditLogTargetType; label: string }[] = [
   { value: "PROJECT", label: "Project" },
   { value: "PROJECT_MEMBER", label: "Project member" },
   { value: "TASK", label: "Task" },
+  { value: "FILE_ATTACHMENT", label: "File" },
 ];
 
 function formatTimestamp(value: string): string {
