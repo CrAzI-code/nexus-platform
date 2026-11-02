@@ -39,6 +39,8 @@ const actions: AuditLogAction[] = [
   'TASK_STATUS_CHANGED',
   'TASK_ARCHIVED',
   'TASK_RESTORED',
+  'FILE_UPLOADED',
+  'FILE_REMOVED',
 ];
 
 const targetTypes: AuditLogTargetType[] = [
@@ -47,6 +49,7 @@ const targetTypes: AuditLogTargetType[] = [
   'PROJECT',
   'PROJECT_MEMBER',
   'TASK',
+  'FILE_ATTACHMENT',
 ];
 
 function isAuditAction(value: string): value is AuditLogAction {

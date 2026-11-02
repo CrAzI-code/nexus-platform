@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { Icon } from "@/components/dashboard/icons";
+import { FileAttachmentsPanel } from "@/components/dashboard/file-attachments-panel";
 import {
   addProjectTaskComment,
   archiveProjectTask,
@@ -493,6 +494,12 @@ export default function TaskDetailsPage({
                 </p>
               )}
             </section>
+
+            <FileAttachmentsPanel
+              organizationId={organizationId}
+              projectId={projectId}
+              taskId={taskId}
+            />
 
             <section className="project-details-card task-comments-card">
               <div className="task-section-heading">

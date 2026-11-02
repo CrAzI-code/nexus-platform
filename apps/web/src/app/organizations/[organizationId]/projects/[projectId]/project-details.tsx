@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProjectDialog } from "@/components/dashboard/project-dialog";
+import { FileAttachmentsPanel } from "@/components/dashboard/file-attachments-panel";
 import { ProjectMembersPanel } from "@/components/dashboard/project-members-panel";
 import { TaskManagement } from "@/components/dashboard/task-management";
 import {
@@ -215,6 +216,10 @@ export default function ProjectDetails({
               organizationId={organizationId}
               projectId={projectId}
               projectStatus={project.status}
+            />
+            <FileAttachmentsPanel
+              organizationId={organizationId}
+              projectId={projectId}
             />
             <TaskManagement
               organizationId={organizationId}

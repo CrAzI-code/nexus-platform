@@ -14,14 +14,17 @@ export type AuditLogAction =
   | "TASK_UPDATED"
   | "TASK_STATUS_CHANGED"
   | "TASK_ARCHIVED"
-  | "TASK_RESTORED";
+  | "TASK_RESTORED"
+  | "FILE_UPLOADED"
+  | "FILE_REMOVED";
 
 export type AuditLogTargetType =
   | "ORGANIZATION_MEMBER"
   | "INVITATION"
   | "PROJECT"
   | "PROJECT_MEMBER"
-  | "TASK";
+  | "TASK"
+  | "FILE_ATTACHMENT";
 
 export type AuditLogItem = {
   id: string;
@@ -72,6 +75,8 @@ const auditActions: AuditLogAction[] = [
   "TASK_STATUS_CHANGED",
   "TASK_ARCHIVED",
   "TASK_RESTORED",
+  "FILE_UPLOADED",
+  "FILE_REMOVED",
 ];
 const targetTypes: AuditLogTargetType[] = [
   "ORGANIZATION_MEMBER",
@@ -79,6 +84,7 @@ const targetTypes: AuditLogTargetType[] = [
   "PROJECT",
   "PROJECT_MEMBER",
   "TASK",
+  "FILE_ATTACHMENT",
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

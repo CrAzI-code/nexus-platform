@@ -228,6 +228,30 @@ Cross-organization access must be denied.
 - No ordinary update/delete endpoints are exposed. Snapshots exclude invitation
   tokens, email addresses, comments, credentials, and session information.
 
+## 8.3 File Sharing
+
+- Every list, upload, download, preview, and removal request requires an
+  independently verified authenticated session and active organization
+  membership.
+- Owners and Admins can access files across their organization. Managers and
+  Members must have active membership in the requested project; project and
+  organization IDs and actor IDs are never accepted as authorization claims
+  from the client.
+- Task attachment routes additionally verify the task belongs to the exact
+  organization and project in the route. Composite database foreign keys
+  enforce the same relationship for persisted task/file associations.
+- Active project members may upload files. An uploader may remove their own
+  file; a project Manager or organization Owner/Admin may remove any file in a
+  project they can access. Removed files are hidden immediately, even if
+  private-disk cleanup needs later retry.
+- The initial allowlist is PDF, PNG, JPEG, WebP, UTF-8 text, and CSV.
+  Extension, browser-declared MIME type, and server-inspected bytes must agree.
+  SVG, HTML, scripts, executables, archives, and unknown formats are rejected.
+  Text and CSV are download-only; only PDF and raster images may be previewed.
+- Storage keys are server-generated UUIDs. Original filenames are metadata
+  only and are checked against path and response-header injection. Private
+  storage paths are never returned to clients.
+
 ## 9. Authorization Enforcement
 
 All authorization checks must happen

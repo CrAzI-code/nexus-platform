@@ -103,9 +103,37 @@ progresses.
 
 ## Getting Started
 
-Development setup instructions will be added
-as the frontend, backend and database are
-configured.
+### Local development
+
+1. Install the dependencies with `npm install` and start the PostgreSQL
+   development database using `docker compose up -d`.
+2. Create `apps/api/.env` from the safe placeholders in `.env.example` (do not
+   overwrite an existing local environment file). Configure the database and
+   Clerk values required by the API. Add `FILE_STORAGE_PATH=./private-files`
+   and `FILE_MAX_UPLOAD_BYTES=10485760` if they are not already present.
+3. Apply pending local schema migrations from the API workspace:
+
+   ```powershell
+   Set-Location .\apps\api
+   npx prisma migrate deploy --config prisma7.config.ts
+   ```
+
+   The file-sharing migration is named
+   `20261102194218_file_sharing`. Review the migration and confirm the target is
+   a local development database before applying it.
+4. Start the API and frontend in separate terminals:
+
+   ```powershell
+   npm run start:dev --workspace=apps/api
+   npm run dev --workspace=apps/web
+   ```
+
+The local API stores file bytes under `apps/api/private-files` by default.
+This directory is private, ignored by Git, and must not be moved under
+`apps/web/public`. Uploads are limited to 10 MiB by default; the API accepts a
+configured limit up to 25 MiB. Local filesystem storage is for development
+only; production needs a durable private storage provider shared by API
+instances, encryption, backups/retention, malware scanning, and orphan cleanup.
 
 ## Development Roadmap
 

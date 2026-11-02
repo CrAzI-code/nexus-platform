@@ -153,7 +153,9 @@ export const AuditLogAction = {
   TASK_UPDATED: 'TASK_UPDATED',
   TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
   TASK_ARCHIVED: 'TASK_ARCHIVED',
-  TASK_RESTORED: 'TASK_RESTORED'
+  TASK_RESTORED: 'TASK_RESTORED',
+  FILE_UPLOADED: 'FILE_UPLOADED',
+  FILE_REMOVED: 'FILE_REMOVED'
 } as const
 
 export type AuditLogAction = (typeof AuditLogAction)[keyof typeof AuditLogAction]
@@ -164,7 +166,8 @@ export const AuditLogTargetType = {
   INVITATION: 'INVITATION',
   PROJECT: 'PROJECT',
   PROJECT_MEMBER: 'PROJECT_MEMBER',
-  TASK: 'TASK'
+  TASK: 'TASK',
+  FILE_ATTACHMENT: 'FILE_ATTACHMENT'
 } as const
 
 export type AuditLogTargetType = (typeof AuditLogTargetType)[keyof typeof AuditLogTargetType]
