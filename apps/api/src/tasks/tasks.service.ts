@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type {
   OrganizationRole,
@@ -306,10 +307,24 @@ export class TasksService {
       this.assertTaskIsActive(task);
 
       const changes: string[] = [];
+      const before: {
+        title?: string;
+        priority?: string;
+        dueAt?: string | null;
+        descriptionChanged?: boolean;
+      } = {};
+      const after: {
+        title?: string;
+        priority?: string;
+        dueAt?: string | null;
+        descriptionChanged?: boolean;
+      } = {};
       const data: Prisma.TaskUpdateManyMutationInput = {};
       if (input.title !== undefined && input.title !== task.title) {
         data.title = input.title;
         changes.push(`title from "${task.title}" to "${input.title}"`);
+        before.title = task.title;
+        after.title = input.title;
       }
       if (
         input.description !== undefined &&
@@ -317,10 +332,14 @@ export class TasksService {
       ) {
         data.description = input.description;
         changes.push('description');
+        before.descriptionChanged = true;
+        after.descriptionChanged = true;
       }
       if (input.priority !== undefined && input.priority !== task.priority) {
         data.priority = input.priority;
         changes.push(`priority from ${task.priority} to ${input.priority}`);
+        before.priority = task.priority;
+        after.priority = input.priority;
       }
       if (input.dueAt !== undefined) {
         const dueAt = this.toDueAt(input.dueAt);
@@ -329,6 +348,8 @@ export class TasksService {
           changes.push(
             `due date from ${task.dueAt?.toISOString().slice(0, 10) ?? 'none'} to ${dueAt?.toISOString().slice(0, 10) ?? 'none'}`,
           );
+          before.dueAt = task.dueAt?.toISOString() ?? null;
+          after.dueAt = dueAt?.toISOString() ?? null;
         }
       }
 
@@ -339,6 +360,12 @@ export class TasksService {
             organizationId,
             projectId,
             archivedAt: null,
+            ...(data.title !== undefined ? { title: task.title } : {}),
+            ...(data.description !== undefined
+              ? { description: task.description }
+              : {}),
+            ...(data.priority !== undefined ? { priority: task.priority } : {}),
+            ...(data.dueAt !== undefined ? { dueAt: task.dueAt } : {}),
           },
           data,
         });
@@ -354,6 +381,15 @@ export class TasksService {
           'UPDATED',
           `Updated ${changes.join('; ')}.`,
         );
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'TASK_UPDATED',
+          targetType: 'TASK',
+          targetId: taskId,
+          before,
+          after,
+        });
       }
 
       const updated = await this.findTaskDetails(
@@ -422,6 +458,7 @@ export class TasksService {
             organizationId,
             projectId,
             archivedAt: null,
+            assigneeId: task.assignee?.userId ?? null,
           },
           data: { assigneeId: input.assigneeId },
         });
@@ -445,6 +482,15 @@ export class TasksService {
           'ASSIGNEE_CHANGED',
           assignmentMessage,
         );
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'TASK_ASSIGNED',
+          targetType: 'TASK',
+          targetId: taskId,
+          before: { assigneeId: task.assignee?.userId ?? null },
+          after: { assigneeId: input.assigneeId ?? null },
+        });
         if (input.assigneeId && input.assigneeId !== userId) {
           await publish([
             {
@@ -502,6 +548,7 @@ export class TasksService {
             organizationId,
             projectId,
             archivedAt: null,
+            status: task.status,
           },
           data: { status: input.status },
         });
@@ -524,6 +571,17 @@ export class TasksService {
           'STATUS_CHANGED',
           message,
         );
+        if (input.status !== task.status) {
+          await AuditLogsService.record(transaction, {
+            organizationId,
+            actorId: userId,
+            action: 'TASK_STATUS_CHANGED',
+            targetType: 'TASK',
+            targetId: taskId,
+            before: { status: task.status },
+            after: { status: input.status },
+          });
+        }
         await this.notifyTaskParticipants(
           transaction,
           publish,
@@ -682,6 +740,15 @@ export class TasksService {
           archived ? 'ARCHIVED' : 'RESTORED',
           archived ? 'Archived this task.' : 'Restored this task.',
         );
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: archived ? 'TASK_ARCHIVED' : 'TASK_RESTORED',
+          targetType: 'TASK',
+          targetId: taskId,
+          before: { archived: !archived },
+          after: { archived },
+        });
       }
 
       const updated = await this.findTaskDetails(

@@ -245,7 +245,17 @@ export default function TeamManagement({
               <h1>{team.organization.name} team</h1>
               <p>Manage members, roles, and invitations for your organization.</p>
             </div>
-            <span className="team-role-chip">{team.currentUserRole}</span>
+            <div className="team-header-actions">
+              {team.canManage && (
+                <Link
+                  className="secondary-button"
+                  href={`/organizations/${encodeURIComponent(organizationId)}/audit-logs`}
+                >
+                  View audit logs
+                </Link>
+              )}
+              <span className="team-role-chip">{team.currentUserRole}</span>
+            </div>
           </header>
 
           {error && <p className="team-alert team-alert-error" role="alert">{error}</p>}

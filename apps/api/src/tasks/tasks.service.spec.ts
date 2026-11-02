@@ -74,6 +74,7 @@ describe('TasksService', () => {
     },
     taskComment: { create: vi.fn(), findMany: vi.fn() },
     taskActivity: { create: vi.fn() },
+    auditLog: { create: vi.fn() },
     notification: { createMany: vi.fn() },
   };
   const prisma = { $transaction: vi.fn() };
@@ -114,6 +115,7 @@ describe('TasksService', () => {
     transaction.taskComment.create.mockResolvedValue({ id: 'comment-id' });
     transaction.taskComment.findMany.mockResolvedValue([]);
     transaction.taskActivity.create.mockResolvedValue({ id: 'activity-id' });
+    transaction.auditLog.create.mockResolvedValue({ id: 'audit-log-id' });
     transaction.notification.createMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(
       (operation: (tx: typeof transaction) => Promise<unknown>) =>
@@ -363,6 +365,19 @@ describe('TasksService', () => {
           }),
         }),
       );
+      expect(transaction.auditLog.create).toHaveBeenCalledTimes(2);
+      expect(transaction.auditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            organizationId: 'organization-id',
+            actorId: 'verified-user-id',
+            action: 'TASK_ASSIGNED',
+            targetId: 'task-id',
+            before: { assigneeId: null },
+            after: { assigneeId: 'eligible-user-id' },
+          }),
+        }),
+      );
       expect(transaction.taskActivity.create).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
@@ -439,6 +454,18 @@ describe('TasksService', () => {
           actorId: 'verified-user-id',
           type: 'STATUS_CHANGED',
           message: 'Marked this task as blocked: Waiting for approval',
+        }),
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'organization-id',
+          actorId: 'verified-user-id',
+          action: 'TASK_STATUS_CHANGED',
+          targetId: 'task-id',
+          before: { status: 'TODO' },
+          after: { status: 'BLOCKED' },
         }),
       }),
     );
@@ -594,6 +621,28 @@ describe('TasksService', () => {
         data: expect.objectContaining({
           actorId: 'verified-user-id',
           type: 'ARCHIVED',
+        }),
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'TASK_ARCHIVED',
+          actorId: 'verified-user-id',
+          before: { archived: false },
+          after: { archived: true },
+        }),
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'TASK_RESTORED',
+          actorId: 'verified-user-id',
+          before: { archived: true },
+          after: { archived: false },
         }),
       }),
     );

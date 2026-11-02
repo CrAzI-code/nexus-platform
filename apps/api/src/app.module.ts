@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma.module.js';
 import { ProjectsModule } from './projects/projects.module.js';
 import { TasksModule } from './tasks/tasks.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
     ProjectsModule,
     TasksModule,
     NotificationsModule,
+    AuditLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

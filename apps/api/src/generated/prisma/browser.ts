@@ -72,3 +72,8 @@ export type Invitation = Prisma.InvitationModel
  *
  */
 export type Notification = Prisma.NotificationModel
+/**
+ * Model AuditLog
+ *
+ */
+export type AuditLog = Prisma.AuditLogModel

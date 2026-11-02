@@ -181,3 +181,14 @@ delivery requires shared pub/sub or a message broker, with every instance
 subscribed to committed notification events and routing them to local
 recipients. No Redis, broker, or external notification infrastructure is
 currently required.
+
+Organization audit logs are stored in the same PostgreSQL database and are
+written in the transaction for each audited membership, invitation, project,
+or important task operation. A read-only
+`GET /organizations/:organizationId/audit-logs` endpoint supports bounded
+pagination and organization-scoped action, actor, target, and date filters.
+Only active Owners and Admins may retrieve records. Before/after snapshots
+contain minimal non-secret values; raw invitation tokens, email addresses,
+comments, and authentication credentials are excluded. Audit rows are
+append-only through the application API, with no ordinary update or delete
+endpoint.

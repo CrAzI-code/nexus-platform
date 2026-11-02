@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type {
   OrganizationRole,
@@ -65,6 +66,8 @@ type ActiveMembership = {
   role: OrganizationRole;
 };
 
+const SERIALIZABLE_RETRIES = 3;
+
 @Injectable()
 export class ProjectsService {
   constructor(
@@ -101,6 +104,14 @@ export class ProjectsService {
           userId,
           status: 'ACTIVE',
         },
+      });
+      await AuditLogsService.record(transaction, {
+        organizationId,
+        actorId: userId,
+        action: 'PROJECT_CREATED',
+        targetType: 'PROJECT',
+        targetId: project.id,
+        after: { name: project.name, status: project.status },
       });
 
       const recipients = await transaction.organizationMembership.findMany({
@@ -268,7 +279,7 @@ export class ProjectsService {
     actorId: string,
     memberUserId: string,
   ): Promise<ProjectMemberResponse> {
-    return this.prisma.$transaction(async (transaction) => {
+    return this.withSerializableRetry(async (transaction) => {
       const membership = await this.findActiveMembership(
         transaction,
         organizationId,
@@ -302,7 +313,18 @@ export class ProjectsService {
         throw new NotFoundException('Active organization member not found.');
       }
 
-      await transaction.projectMember.upsert({
+      const existingProjectMember =
+        await transaction.projectMember.findUnique({
+          where: {
+            organizationId_projectId_userId: {
+              organizationId,
+              projectId,
+              userId: memberUserId,
+            },
+          },
+          select: { id: true, status: true },
+        });
+      const projectMember = await transaction.projectMember.upsert({
         where: {
           organizationId_projectId_userId: {
             organizationId,
@@ -317,7 +339,21 @@ export class ProjectsService {
           status: 'ACTIVE',
         },
         update: { status: 'ACTIVE' },
+        select: { id: true, status: true },
       });
+      if (existingProjectMember?.status !== 'ACTIVE') {
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId,
+          action: 'PROJECT_MEMBER_ADDED',
+          targetType: 'PROJECT_MEMBER',
+          targetId: projectMember.id,
+          ...(existingProjectMember
+            ? { before: { status: existingProjectMember.status } }
+            : {}),
+          after: { status: projectMember.status },
+        });
+      }
 
       return {
         userId: targetMembership.userId,
@@ -350,6 +386,20 @@ export class ProjectsService {
       this.assertCanManage(membership.role);
       this.assertProjectIsActive(project.status);
 
+      const existingProjectMember =
+        await transaction.projectMember.findFirst({
+          where: {
+            organizationId,
+            projectId,
+            userId: memberUserId,
+            status: 'ACTIVE',
+            membership: { status: 'ACTIVE' },
+          },
+          select: { id: true, status: true },
+        });
+      if (!existingProjectMember) {
+        throw new NotFoundException('Active project member not found.');
+      }
       const result = await transaction.projectMember.updateMany({
         where: {
           organizationId,
@@ -363,6 +413,15 @@ export class ProjectsService {
       if (result.count !== 1) {
         throw new NotFoundException('Active project member not found.');
       }
+      await AuditLogsService.record(transaction, {
+        organizationId,
+        actorId,
+        action: 'PROJECT_MEMBER_REMOVED',
+        targetType: 'PROJECT_MEMBER',
+        targetId: existingProjectMember.id,
+        before: { status: existingProjectMember.status },
+        after: { status: 'REMOVED' },
+      });
     });
   }
 
@@ -390,14 +449,22 @@ export class ProjectsService {
         throw new ConflictException('Archived projects cannot be edited.');
       }
 
-      await transaction.project.updateMany({
-        where: {
-          id: projectId,
-          organizationId,
-          status: 'ACTIVE',
-        },
+      const updateWhere: Prisma.ProjectWhereInput = {
+        id: projectId,
+        organizationId,
+        status: 'ACTIVE',
+        ...(input.name !== undefined ? { name: project.name } : {}),
+        ...(input.description !== undefined
+          ? { description: project.description }
+          : {}),
+      };
+      const update = await transaction.project.updateMany({
+        where: updateWhere,
         data: input,
       });
+      if (update.count !== 1) {
+        throw new ConflictException('This project changed. Reload and try again.');
+      }
       const updatedProject = await this.findAccessibleProject(
         transaction,
         organizationId,
@@ -411,6 +478,31 @@ export class ProjectsService {
         (input.description !== undefined &&
           input.description !== project.description)
       ) {
+        const before: { name?: string; descriptionChanged?: boolean } = {};
+        const after: {
+          name?: string;
+          descriptionChanged?: boolean;
+        } = {};
+        if (input.name !== undefined && input.name !== project.name) {
+          before.name = project.name;
+          after.name = updatedProject.name;
+        }
+        if (
+          input.description !== undefined &&
+          input.description !== project.description
+        ) {
+          before.descriptionChanged = true;
+          after.descriptionChanged = true;
+        }
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'PROJECT_UPDATED',
+          targetType: 'PROJECT',
+          targetId: projectId,
+          before,
+          after,
+        });
         await this.notifyProjectMembers(
           transaction,
           publish,
@@ -449,7 +541,7 @@ export class ProjectsService {
 
       const wasActive = project.status === 'ACTIVE';
       if (wasActive) {
-        await transaction.project.updateMany({
+        const update = await transaction.project.updateMany({
           where: {
             id: projectId,
             organizationId,
@@ -457,6 +549,9 @@ export class ProjectsService {
           },
           data: { status: 'ARCHIVED' },
         });
+        if (update.count !== 1) {
+          throw new ConflictException('This project changed. Reload and try again.');
+        }
       }
 
       const archivedProject = await this.findAccessibleProject(
@@ -467,6 +562,15 @@ export class ProjectsService {
         membership.role,
       );
       if (wasActive) {
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'PROJECT_ARCHIVED',
+          targetType: 'PROJECT',
+          targetId: projectId,
+          before: { status: 'ACTIVE' },
+          after: { status: 'ARCHIVED' },
+        });
         await this.notifyProjectMembers(
           transaction,
           publish,
@@ -479,6 +583,71 @@ export class ProjectsService {
         );
       }
       return this.toResponse(archivedProject, membership.role);
+    });
+  }
+
+  async restore(
+    organizationId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectResponse> {
+    return this.notifications.withTransaction(async (transaction, publish) => {
+      const membership = await this.findActiveMembership(
+        transaction,
+        organizationId,
+        userId,
+      );
+      const project = await this.findAccessibleProject(
+        transaction,
+        organizationId,
+        projectId,
+        userId,
+        membership.role,
+      );
+      this.assertCanManage(membership.role);
+
+      const wasArchived = project.status === 'ARCHIVED';
+      if (wasArchived) {
+        const update = await transaction.project.updateMany({
+          where: {
+            id: projectId,
+            organizationId,
+            status: 'ARCHIVED',
+          },
+          data: { status: 'ACTIVE' },
+        });
+        if (update.count !== 1) {
+          throw new ConflictException('This project changed. Reload and try again.');
+        }
+        const restoredProject = await this.findAccessibleProject(
+          transaction,
+          organizationId,
+          projectId,
+          userId,
+          membership.role,
+        );
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'PROJECT_RESTORED',
+          targetType: 'PROJECT',
+          targetId: projectId,
+          before: { status: 'ARCHIVED' },
+          after: { status: 'ACTIVE' },
+        });
+        await this.notifyProjectMembers(
+          transaction,
+          publish,
+          organizationId,
+          projectId,
+          userId,
+          randomUUID(),
+          'Project restored',
+          `"${restoredProject.name}" was restored.`,
+        );
+        return this.toResponse(restoredProject, membership.role);
+      }
+      return this.toResponse(project, membership.role);
     });
   }
 
@@ -500,6 +669,29 @@ export class ProjectsService {
       throw new NotFoundException('Organization not found.');
     }
     return membership;
+  }
+
+  private async withSerializableRetry<T>(
+    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    for (let attempt = 1; attempt <= SERIALIZABLE_RETRIES; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        const isSerializationConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+        if (!isSerializationConflict) throw error;
+        if (attempt === SERIALIZABLE_RETRIES) {
+          throw new ConflictException(
+            'This project change conflicted with another request. Please try again.',
+          );
+        }
+      }
+    }
+    throw new ConflictException('Unable to complete this project change.');
   }
 
   private async findAccessibleProject(

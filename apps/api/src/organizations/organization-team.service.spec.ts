@@ -37,8 +37,9 @@ const transaction = {
     update: vi.fn(),
     updateMany: vi.fn(),
   },
-  projectMember: { updateMany: vi.fn() },
+  projectMember: { findMany: vi.fn(), updateMany: vi.fn() },
   user: { findFirst: vi.fn() },
+  auditLog: { create: vi.fn() },
   notification: { createMany: vi.fn() },
 };
 
@@ -115,6 +116,8 @@ describe('OrganizationTeamService', () => {
     });
     transaction.invitation.updateMany.mockResolvedValue({ count: 0 });
     transaction.projectMember.updateMany.mockResolvedValue({ count: 1 });
+    transaction.projectMember.findMany.mockResolvedValue([]);
+    transaction.auditLog.create.mockResolvedValue({ id: 'audit-log-id' });
     transaction.user.findFirst.mockResolvedValue(null);
     transaction.notification.createMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(
@@ -162,6 +165,21 @@ describe('OrganizationTeamService', () => {
     expect(prisma.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          organizationId: 'organization-id',
+          actorId: 'owner-id',
+          action: 'INVITATION_CREATED',
+          targetType: 'INVITATION',
+          targetId: 'invitation-id',
+          after: { role: 'MEMBER', status: 'PENDING' },
+        },
+      }),
+    );
+    expect(transaction.auditLog.create.mock.calls[0]?.[0].data).not.toHaveProperty(
+      'tokenHash',
     );
   });
 
@@ -295,6 +313,16 @@ describe('OrganizationTeamService', () => {
         create: expect.objectContaining({
           role: 'MEMBER',
           status: 'ACTIVE',
+        }),
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'organization-id',
+          actorId: 'verified-user-id',
+          action: 'INVITATION_ACCEPTED',
+          targetId: 'invitation-id',
         }),
       }),
     );
@@ -491,6 +519,17 @@ describe('OrganizationTeamService', () => {
     expect(transaction.organizationMembership.updateMany).toHaveBeenCalledWith(
       expect.anything(),
     );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          actorId: 'owner-id',
+          action: 'ORGANIZATION_MEMBER_ROLE_CHANGED',
+          targetId: 'member-id',
+          before: { role: 'MEMBER' },
+          after: { role: 'ADMIN' },
+        }),
+      }),
+    );
   });
 
   it('revokes a pending invitation without returning its token hash', async () => {
@@ -521,6 +560,15 @@ describe('OrganizationTeamService', () => {
       }),
     );
     expect(transaction.invitation.update).not.toHaveBeenCalled();
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'INVITATION_REVOKED',
+          actorId: 'owner-id',
+          targetId: 'invitation-id',
+        }),
+      }),
+    );
   });
 
   it('does not revoke invitations belonging to another organization', async () => {
@@ -621,6 +669,9 @@ describe('OrganizationTeamService', () => {
   });
 
   it('removes membership and project access without deleting history', async () => {
+    transaction.projectMember.findMany.mockResolvedValue([
+      { id: 'project-member-id', status: 'ACTIVE' },
+    ]);
     transaction.organizationMembership.findFirst
       .mockResolvedValueOnce({ role: 'OWNER' })
       .mockResolvedValueOnce({
@@ -651,6 +702,27 @@ describe('OrganizationTeamService', () => {
       },
       data: { status: 'REMOVED' },
     });
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'organization-id',
+          actorId: 'owner-id',
+          action: 'ORGANIZATION_MEMBER_REMOVED',
+          targetId: 'member-id',
+        }),
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'PROJECT_MEMBER_REMOVED',
+          actorId: 'owner-id',
+          targetId: 'project-member-id',
+          before: { status: 'ACTIVE' },
+          after: { status: 'REMOVED' },
+        }),
+      }),
+    );
   });
 
   it('prevents cross-organization team access', async () => {

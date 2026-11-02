@@ -254,6 +254,22 @@ export async function archiveProject(
   return readProject(response);
 }
 
+export async function restoreProject(
+  token: string,
+  organizationId: string,
+  projectId: string,
+): Promise<OrganizationProject> {
+  const response = await fetch(
+    `${apiBaseUrl}/organizations/${encodeURIComponent(organizationId)}/projects/${encodeURIComponent(projectId)}/restore`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  if (!response.ok) throw await getResponseError(response);
+  return readProject(response);
+}
+
 export async function listProjectMembers(
   token: string,
   organizationId: string,

@@ -97,6 +97,33 @@ enum NotificationResourceType {
   ORGANIZATION
 }
 
+enum AuditLogAction {
+  ORGANIZATION_MEMBER_ROLE_CHANGED
+  ORGANIZATION_MEMBER_REMOVED
+  INVITATION_CREATED
+  INVITATION_REVOKED
+  INVITATION_ACCEPTED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  PROJECT_ARCHIVED
+  PROJECT_RESTORED
+  PROJECT_MEMBER_ADDED
+  PROJECT_MEMBER_REMOVED
+  TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_STATUS_CHANGED
+  TASK_ARCHIVED
+  TASK_RESTORED
+}
+
+enum AuditLogTargetType {
+  ORGANIZATION_MEMBER
+  INVITATION
+  PROJECT
+  PROJECT_MEMBER
+  TASK
+}
+
 model User {
   id        String     @id @default(uuid()) @db.Uuid
   name      String
@@ -105,9 +132,10 @@ model User {
   createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  identities  AuthIdentity[]
-  memberships OrganizationMembership[]
+  identities   AuthIdentity[]
+  memberships  OrganizationMembership[]
   notifications Notification[]
+  auditLogs    AuditLog[]
 
   @@map("users")
 }
@@ -138,6 +166,7 @@ model Organization {
   projects    Project[]
   invitations Invitation[]
   notifications Notification[]
+  auditLogs   AuditLog[]
 
   @@map("organizations")
 }
@@ -313,4 +342,25 @@ model Notification {
   @@index([organizationId, recipientId])
   @@index([projectId])
   @@map("notifications")
+}
+
+model AuditLog {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  actorId        String             @map("actor_id") @db.Uuid
+  action         AuditLogAction
+  targetType     AuditLogTargetType @map("target_type")
+  targetId       String             @map("target_id") @db.Uuid
+  before         Json?              @db.JsonB
+  after          Json?              @db.JsonB
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor        User         @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([organizationId, action, createdAt(sort: Desc)])
+  @@index([organizationId, actorId, createdAt(sort: Desc)])
+  @@index([organizationId, targetType, targetId, createdAt(sort: Desc)])
+  @@map("audit_logs")
 }

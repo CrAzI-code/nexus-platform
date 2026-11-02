@@ -115,4 +115,13 @@ export class ProjectsController {
   ): Promise<ProjectResponse> {
     return this.projects.archive(organizationId, projectId, user.id);
   }
+
+  @Patch(':projectId/restore')
+  restore(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ProjectResponse> {
+    return this.projects.restore(organizationId, projectId, user.id);
+  }
 }

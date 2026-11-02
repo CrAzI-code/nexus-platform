@@ -205,6 +205,34 @@ Constraints and access rules:
 - Task/project notifications are inserted in the same Prisma transaction as
   their source event. Email and other external delivery are not involved.
 
+### Audit Logs
+
+Stores append-only organization audit events for security-sensitive and
+administrative operations.
+
+Fields:
+- organization_id (Foreign Key → organizations.id)
+- actor_id (Foreign Key → users.id, derived from the verified session)
+- action
+- target_type and target_id
+- optional before and after JSON snapshots
+- created_at
+
+Audit actions cover organization member role changes/removals, invitation
+creation/revocation/acceptance, project creation/updates/archive/restore and
+membership changes, and important task updates/assignment/status/archive/
+restore operations. Snapshots contain only fields needed to explain a change;
+invitation tokens, emails, comments, credentials, and session data are not
+stored. Task comments and ordinary task activity remain in their existing
+tables and are not copied into audit logs.
+
+The target is polymorphic, so target_id intentionally has no resource foreign
+key. organization_id and actor_id are constrained by foreign keys; application
+writes use the same transaction as the business operation. The API exposes
+read-only, paginated retrieval to organization Owners and Admins and provides
+no update or delete endpoint. Audit retention and privileged database-level
+tamper controls remain operational concerns.
+
 Invitation tokens expire after seven days. The un-hashed token is returned only
 once when the invitation is created so an authorized Owner or Admin can share
 the link. Team listings never include token material. Accepting an invitation
@@ -355,6 +383,8 @@ Stores important application activity.
 - A project can have multiple members.
 - A channel can contain multiple messages.
 - A user can have multiple notifications.
+- A user can act in many audit log entries.
+- An organization can contain many audit log entries.
 - Removed members retain historical access context and can be reactivated.
 
 ## 6. Composite Foreign Keys and Tenant Integrity
@@ -464,7 +494,8 @@ Recommended indexes:
 - project_members: organization_id, project_id, user_id
 - tasks: organization_id, project_id, assignee_id, status, due_at
 - invitations: organization_id, email, expires_at
-- audit_logs: organization_id, user_id, created_at
+- audit_logs: organization_id + created_at, action + created_at,
+  actor_id + created_at, target_type + target_id + created_at
 
 Additional constraints:
 - unique slug on organizations

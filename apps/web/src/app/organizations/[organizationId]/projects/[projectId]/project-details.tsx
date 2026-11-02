@@ -9,6 +9,7 @@ import { TaskManagement } from "@/components/dashboard/task-management";
 import {
   archiveProject,
   getProject,
+  restoreProject,
   updateProject,
   type OrganizationProject,
   type ProjectInput,
@@ -111,6 +112,28 @@ export default function ProjectDetails({
     }
   }
 
+  async function restore() {
+    if (!project) return;
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Your session is unavailable. Sign in again.");
+      const restored = await restoreProject(token, organizationId, projectId);
+      setLoadedProject((current) => ({
+        ...current,
+        project: restored,
+        error: null,
+      }));
+    } catch (requestError) {
+      setLoadedProject((current) => ({
+        ...current,
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : "We couldn’t restore this project. Please try again.",
+      }));
+    }
+  }
+
   return (
     <main className="project-details-page">
       <div className="project-details-shell">
@@ -156,6 +179,17 @@ export default function ProjectDetails({
                       type="button"
                     >
                       Archive
+                    </button>
+                  </div>
+                )}
+                {project.canManage && project.status === "ARCHIVED" && (
+                  <div className="project-details-actions">
+                    <button
+                      className="secondary-button"
+                      onClick={restore}
+                      type="button"
+                    >
+                      Restore project
                     </button>
                   </div>
                 )}
