@@ -1,0 +1,17 @@
+{
+  "name": "nexus-platform",
+  "version": "1.0.0",
+  "private": "true",
+  "description": "NEXUS - Team collaboration and workflow management platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {},
+  "type": "commonjs",
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true,
+    "prisma@7.10.1": true,
+    "@prisma/engines@7.10.1": true
+  }
+}

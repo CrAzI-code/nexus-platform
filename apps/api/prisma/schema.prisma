@@ -1,0 +1,220 @@
+generator client {
+  provider        = "prisma-client"
+  output = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum InvitationRole {
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectMemberStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model User {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  email     String
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  identities  AuthIdentity[]
+  memberships OrganizationMembership[]
+
+  @@map("users")
+}
+
+model AuthIdentity {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  provider        String
+  providerSubject String   @map("provider_subject")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+  @@map("auth_identities")
+}
+
+model Organization {
+  id        String             @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String             @unique
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  memberships OrganizationMembership[]
+  projects    Project[]
+  invitations Invitation[]
+
+  @@map("organizations")
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  role           OrganizationRole @default(MEMBER)
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  projectMemberships ProjectMember[]
+  sentInvitations    Invitation[]    @relation("InvitationInviterMembership")
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId], where: { role: "OWNER", status: "ACTIVE" }, map: "organization_memberships_one_active_owner")
+  @@index([userId, status])
+  @@map("organization_memberships")
+}
+
+model Project {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  name           String
+  description    String?
+  status         ProjectStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  members ProjectMember[]
+  tasks   Task[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id             String              @id @default(uuid()) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  projectId      String              @map("project_id") @db.Uuid
+  userId         String              @map("user_id") @db.Uuid
+  status         ProjectMemberStatus @default(ACTIVE)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  project    Project                @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  membership OrganizationMembership @relation(fields: [organizationId, userId], references: [organizationId, userId], onDelete: Restrict)
+
+  assignedTasks Task[] @relation("TaskAssignee")
+  createdTasks  Task[] @relation("TaskCreator")
+
+  @@unique([organizationId, projectId, userId])
+  @@index([organizationId, userId, status])
+  @@map("project_members")
+}
+
+model Task {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  projectId      String       @map("project_id") @db.Uuid
+  creatorId      String       @map("creator_id") @db.Uuid
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  assigneeId     String?      @map("assignee_id") @db.Uuid
+  dueAt          DateTime?    @map("due_at") @db.Timestamptz
+  archivedAt     DateTime?    @map("archived_at") @db.Timestamptz
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  project Project @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+
+  creator ProjectMember @relation("TaskCreator", fields: [organizationId, projectId, creatorId], references: [organizationId, projectId, userId], onDelete: Restrict)
+
+  assignee ProjectMember? @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
+
+  @@index([organizationId, projectId, status])
+  @@index([organizationId, assigneeId, status])
+  @@index([organizationId, projectId, creatorId])
+  @@map("tasks")
+}
+
+model Invitation {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  inviterId      String           @map("inviter_id") @db.Uuid
+  email          String
+  intendedRole   InvitationRole   @default(MEMBER) @map("intended_role")
+  status         InvitationStatus @default(PENDING)
+  tokenHash      String           @unique @map("token_hash")
+  expiresAt      DateTime         @map("expires_at") @db.Timestamptz
+  acceptedAt     DateTime?        @map("accepted_at") @db.Timestamptz
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  inviterMembership OrganizationMembership @relation("InvitationInviterMembership", fields: [organizationId, inviterId], references: [organizationId, userId], onDelete: Restrict)
+
+  @@index([organizationId, status])
+  @@map("invitations")
+}

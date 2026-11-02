@@ -129,9 +129,12 @@ when their functionality is required.
 
 ## 9. Current Architecture Status
 
-Status: Initial architecture defined.
+Status: Modular monolith architecture implemented in the initial applications.
 
-Implementation: Not started.
+The NestJS API uses Prisma for PostgreSQL access and Clerk for independently
+verified authentication. Organization onboarding is implemented as an
+authenticated API module. The Next.js app provides the authenticated
+organization setup flow and directs members to the workspace dashboard.
 
-All architectural changes must be documented
-and reviewed before implementation.
+Organization and membership creation uses the existing database schema and
+one Prisma transaction. No schema migration was required for onboarding.

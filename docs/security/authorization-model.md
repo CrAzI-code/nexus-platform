@@ -227,14 +227,17 @@ Required tests:
 
 ## 12. Current Status
 
-Status: Proposed v1 authorization policy.
+Status: v1 authorization policy with initial implementation in progress.
 
 Authentication provider: Clerk (approved).
 
-Implementation: Not started.
+Implemented: Clerk session verification in the NestJS API and authenticated
+organization onboarding. Organization endpoints derive user identity from the
+verified NEXUS user context, create the initial OWNER membership transactionally,
+and list only active organizations for the current member.
 
-Database constraints and authorization
-tests must be designed before implementation.
+Project-level access enforcement remains future work and must be implemented
+before adding protected project operations.
 
 
 ### OWNER
@@ -296,10 +299,13 @@ Required tests include:
 
 ## 8. Current Status
 
-Status: Permission model proposed.
+Status: Permission model approved for v1; implementation is in progress.
 
-Authentication provider: Not selected.
+Authentication provider: Clerk.
 
-Implementation: Not started.
+Implemented: Authenticated organization creation and member-scoped organization
+listing. API authorization uses the verified internal user identity, not
+client-supplied user IDs or roles.
 
-All decisions must be reviewed before implementation.
+Project and resource authorization rules remain to be implemented with their
+corresponding API modules.

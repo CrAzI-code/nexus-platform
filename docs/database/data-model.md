@@ -428,24 +428,15 @@ Additional constraints:
 
 ## 12. Current Status
 
-Status: Conceptual model drafted and aligned with the current architecture decisions.
+The Prisma schema and initial migration implement the core identity,
+organization, membership, project, and task models described above.
 
-No production database schema has been created.
+Organization onboarding uses the existing `organizations` and
+`organization_memberships` tables. Creating an organization and its first
+OWNER membership happens in one Prisma transaction. The unique organization
+slug constraint is used to safely retry collisions. Listing organizations is
+scoped to the authenticated user's active memberships and active organizations.
 
-No Prisma schema has been generated.
-
-No SQL migration files have been generated.
-
-The current design stays consistent with:
-- Clerk authentication
-- internal NEXUS user UUIDs
-- separate auth_identities table
-- exactly one active Owner per active organization
-- no project-level roles
-- organization membership required before project membership
-- composite tenant foreign keys
-- task assignment requires active project membership
-- historical membership retention
-- archive-first approach
-
-All relationships and constraints remain subject to final implementation review before production use.
+No schema change or migration is required for organization onboarding.
+Production deployment and data-retention policies remain separate operational
+decisions.
