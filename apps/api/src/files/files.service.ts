@@ -224,39 +224,40 @@ export class FilesService {
           id: fileId,
           organizationId,
           projectId,
-          removedAt: null,
         },
         select: fileSelect,
       });
       if (!file) throw new NotFoundException('File not found.');
       this.assertCanRemove(file, access.role, userId);
 
-      const removedAt = new Date();
-      const update = await transaction.fileAttachment.updateMany({
-        where: {
-          id: fileId,
-          organizationId,
-          projectId,
-          removedAt: null,
-        },
-        data: { removedAt },
-      });
-      if (update.count !== 1)
-        throw new ConflictException('File was already removed.');
+      if (file.removedAt === null) {
+        const removedAt = new Date();
+        const update = await transaction.fileAttachment.updateMany({
+          where: {
+            id: fileId,
+            organizationId,
+            projectId,
+            removedAt: null,
+          },
+          data: { removedAt },
+        });
+        if (update.count !== 1)
+          throw new ConflictException('File was already removed.');
 
-      await AuditLogsService.record(transaction, {
-        organizationId,
-        actorId: userId,
-        action: 'FILE_REMOVED',
-        targetType: 'FILE_ATTACHMENT',
-        targetId: file.id,
-        before: {
-          mimeType: file.mimeType,
-          sizeBytes: file.sizeBytes,
-          taskId: file.taskAttachment?.taskId ?? null,
-        },
-        after: { removed: true },
-      });
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'FILE_REMOVED',
+          targetType: 'FILE_ATTACHMENT',
+          targetId: file.id,
+          before: {
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            taskId: file.taskAttachment?.taskId ?? null,
+          },
+          after: { removed: true },
+        });
+      }
 
       return file.storageKey;
     });
@@ -265,6 +266,9 @@ export class FilesService {
       await this.storage.remove(storageKey, 'active');
     } catch (error) {
       this.logStorageFailure('remove', error);
+      throw new ServiceUnavailableException(
+        'File removal is pending. Please retry later.',
+      );
     }
   }
 

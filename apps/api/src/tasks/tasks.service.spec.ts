@@ -191,7 +191,57 @@ describe('TasksService', () => {
     );
   });
 
+  it.each(['OWNER', 'ADMIN'] as const)(
+    'allows organization %s to read tasks for an unassigned project without granting mutation capabilities',
+    async (role) => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+      transaction.projectMember.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.list('organization-id', 'project-id', 'verified-user-id'),
+      ).resolves.toMatchObject([
+        { id: 'task-id', canManage: false, canAssignOthers: false },
+      ]);
+      await expect(
+        service.get(
+          'organization-id',
+          'project-id',
+          'task-id',
+          'verified-user-id',
+        ),
+      ).resolves.toMatchObject({
+        id: 'task-id',
+        canManage: false,
+        canAssignOthers: false,
+      });
+
+      expect(transaction.project.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { organizationId: 'organization-id', id: 'project-id' },
+        }),
+      );
+    },
+  );
+
+  it('preserves task mutation capabilities for organization admins who are project members', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'ADMIN',
+    });
+
+    await expect(
+      service.get(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'verified-user-id',
+      ),
+    ).resolves.toMatchObject({ canManage: true, canAssignOthers: true });
+  });
+
   it('hides tasks from users who are not active members of the project', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'MEMBER',
+    });
     transaction.projectMember.findFirst.mockResolvedValue(null);
 
     await expect(
@@ -204,6 +254,50 @@ describe('TasksService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(transaction.task.findFirst).not.toHaveBeenCalled();
   });
+
+  it('denies organization admins access when the project is not in the requested organization', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'ADMIN',
+    });
+    transaction.project.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.list(
+        'another-organization',
+        'another-project',
+        'verified-user-id',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(transaction.project.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'another-organization',
+          id: 'another-project',
+        },
+      }),
+    );
+    expect(transaction.task.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['OWNER', 'ADMIN'] as const)(
+    'does not grant organization %s task editing without project membership',
+    async (role) => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+      transaction.projectMember.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update(
+          'organization-id',
+          'project-id',
+          'task-id',
+          'verified-user-id',
+          { title: 'Unauthorized edit' },
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(transaction.task.updateMany).not.toHaveBeenCalled();
+    },
+  );
 
   it('scopes task lookup by organization, project, and task ID', async () => {
     transaction.task.findFirst.mockResolvedValue(null);

@@ -98,6 +98,7 @@ type Transaction = Prisma.TransactionClient;
 type ProjectAccess = {
   role: OrganizationRole;
   projectStatus: 'ACTIVE' | 'ARCHIVED';
+  isProjectMember: boolean;
 };
 
 function displayAttributionName(name: string | null | undefined): string {
@@ -167,7 +168,7 @@ export class TasksService {
     input: CreateTaskDto,
   ): Promise<TaskSummaryResponse> {
     return this.prisma.$transaction(async (transaction) => {
-      const access = await this.findProjectAccess(
+      const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
         projectId,
@@ -207,7 +208,7 @@ export class TasksService {
     userId: string,
   ): Promise<TaskSummaryResponse[]> {
     return this.prisma.$transaction(async (transaction) => {
-      const access = await this.findProjectAccess(
+      const access = await this.findProjectReadAccess(
         transaction,
         organizationId,
         projectId,
@@ -218,7 +219,9 @@ export class TasksService {
         select: taskSelect,
         orderBy: [{ archivedAt: 'asc' }, { updatedAt: 'desc' }],
       });
-      return tasks.map((task) => this.toSummary(task, access.role));
+      return tasks.map((task) =>
+        this.toSummary(task, access.role, access.isProjectMember),
+      );
     });
   }
 
@@ -229,7 +232,7 @@ export class TasksService {
     userId: string,
   ): Promise<TaskDetailsResponse> {
     return this.prisma.$transaction(async (transaction) => {
-      const access = await this.findProjectAccess(
+      const access = await this.findProjectReadAccess(
         transaction,
         organizationId,
         projectId,
@@ -241,7 +244,7 @@ export class TasksService {
         projectId,
         taskId,
       );
-      return this.toDetails(task, access.role);
+      return this.toDetails(task, access.role, access.isProjectMember);
     });
   }
 
@@ -251,7 +254,7 @@ export class TasksService {
     userId: string,
   ): Promise<{ members: TaskProjectMemberResponse[]; canAssignOthers: boolean }> {
     return this.prisma.$transaction(async (transaction) => {
-      const access = await this.findProjectAccess(
+      const access = await this.findProjectReadAccess(
         transaction,
         organizationId,
         projectId,
@@ -277,7 +280,8 @@ export class TasksService {
             isCurrentUser: member.userId === userId,
           }))
           .sort((left, right) => left.name.localeCompare(right.name)),
-        canAssignOthers: this.canManage(access.role),
+        canAssignOthers:
+          access.isProjectMember && this.canManage(access.role),
       };
     });
   }
@@ -290,7 +294,7 @@ export class TasksService {
     input: UpdateTaskDto,
   ): Promise<TaskDetailsResponse> {
     return this.prisma.$transaction(async (transaction) => {
-      const access = await this.findProjectAccess(
+      const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
         projectId,
@@ -410,7 +414,7 @@ export class TasksService {
     input: AssignTaskDto,
   ): Promise<TaskDetailsResponse> {
     return this.notifications.withTransaction(async (transaction, publish) => {
-      const access = await this.findProjectAccess(
+      const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
         projectId,
@@ -526,7 +530,7 @@ export class TasksService {
     input: ChangeTaskStatusDto,
   ): Promise<TaskDetailsResponse> {
     return this.notifications.withTransaction(async (transaction, publish) => {
-      const access = await this.findProjectAccess(
+      const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
         projectId,
@@ -611,7 +615,7 @@ export class TasksService {
     input: CreateTaskCommentDto,
   ): Promise<TaskDetailsResponse> {
     return this.notifications.withTransaction(async (transaction, publish) => {
-      const access = await this.findProjectAccess(
+      const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
         projectId,
@@ -703,7 +707,7 @@ export class TasksService {
     archived: boolean,
   ): Promise<TaskDetailsResponse> {
     return this.prisma.$transaction(async (transaction) => {
-      const access = await this.findProjectAccess(
+      const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
         projectId,
@@ -761,7 +765,7 @@ export class TasksService {
     });
   }
 
-  private async findProjectAccess(
+  private async requireProjectMemberAccess(
     transaction: Transaction,
     organizationId: string,
     projectId: string,
@@ -794,7 +798,57 @@ export class TasksService {
       throw new NotFoundException('Project not found.');
     }
 
-    return { role: membership.role, projectStatus: project.status };
+    return {
+      role: membership.role,
+      projectStatus: project.status,
+      isProjectMember: true,
+    };
+  }
+
+  private async findProjectReadAccess(
+    transaction: Transaction,
+    organizationId: string,
+    projectId: string,
+    userId: string,
+  ): Promise<ProjectAccess> {
+    const membership = await transaction.organizationMembership.findFirst({
+      where: {
+        organizationId,
+        userId,
+        status: 'ACTIVE',
+        organization: { status: 'ACTIVE' },
+      },
+      select: { role: true },
+    });
+    const project = await transaction.project.findFirst({
+      where: { organizationId, id: projectId },
+      select: { status: true },
+    });
+    if (!membership || !project) {
+      throw new NotFoundException('Project not found.');
+    }
+
+    const projectMember = await transaction.projectMember.findFirst({
+      where: {
+        organizationId,
+        projectId,
+        userId,
+        status: 'ACTIVE',
+        membership: { status: 'ACTIVE' },
+      },
+      select: { id: true },
+    });
+    const hasOrganizationReadAccess =
+      membership.role === 'OWNER' || membership.role === 'ADMIN';
+    if (!projectMember && !hasOrganizationReadAccess) {
+      throw new NotFoundException('Project not found.');
+    }
+
+    return {
+      role: membership.role,
+      projectStatus: project.status,
+      isProjectMember: Boolean(projectMember),
+    };
   }
 
   private async findTask(
@@ -968,6 +1022,7 @@ export class TasksService {
   private toSummary(
     task: TaskRow,
     role: OrganizationRole,
+    isProjectMember = true,
   ): TaskSummaryResponse {
     return {
       id: task.id,
@@ -993,17 +1048,18 @@ export class TasksService {
           }
         : null,
       commentCount: task._count.comments,
-      canManage: this.canManage(role),
-      canAssignOthers: this.canManage(role),
+      canManage: isProjectMember && this.canManage(role),
+      canAssignOthers: isProjectMember && this.canManage(role),
     };
   }
 
   private toDetails(
     task: TaskDetailsRow,
     role: OrganizationRole,
+    isProjectMember = true,
   ): TaskDetailsResponse {
     return {
-      ...this.toSummary(task, role),
+      ...this.toSummary(task, role, isProjectMember),
       comments: [...task.comments].reverse().map((comment) => ({
         id: comment.id,
         authorId: comment.authorId,

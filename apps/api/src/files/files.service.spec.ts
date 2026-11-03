@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -361,6 +365,41 @@ describe('FilesService', () => {
       }),
     );
     expect(storage.remove).toHaveBeenCalledWith(storageKey, 'active');
+  });
+
+  it('reports a retryable failure and preserves removal metadata when storage deletion fails', async () => {
+    storage.remove.mockRejectedValueOnce(new Error('provider unavailable'));
+
+    await expect(
+      service.remove(organizationId, projectId, fileId, userId),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(transaction.fileAttachment.updateMany).toHaveBeenCalledWith({
+      where: { id: fileId, organizationId, projectId, removedAt: null },
+      data: { removedAt: expect.any(Date) },
+    });
+    expect(transaction.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(storage.remove).toHaveBeenCalledWith(storageKey, 'active');
+  });
+
+  it('retries a failed deletion for an already removed file without duplicating its audit event', async () => {
+    storage.remove.mockRejectedValueOnce(new Error('provider unavailable'));
+
+    await expect(
+      service.remove(organizationId, projectId, fileId, userId),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    transaction.fileAttachment.findFirst.mockResolvedValue(
+      makeFileRow({ removedAt: new Date('2026-11-02T18:00:00.000Z') }),
+    );
+    await expect(
+      service.remove(organizationId, projectId, fileId, userId),
+    ).resolves.toBeUndefined();
+
+    expect(transaction.fileAttachment.updateMany).toHaveBeenCalledTimes(1);
+    expect(transaction.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(storage.remove).toHaveBeenCalledTimes(2);
+    expect(storage.remove).toHaveBeenLastCalledWith(storageKey, 'active');
   });
 
   it('cleans up stored bytes when metadata or audit persistence fails', async () => {

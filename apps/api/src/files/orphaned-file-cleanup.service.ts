@@ -69,21 +69,19 @@ export class OrphanedFileCleanupService {
     do {
       const page = await this.storage.list(area, { cursor, limit: 250 });
       report.examined += page.objects.length;
-      const oldObjects = page.objects.filter((object) => {
-        if (object.lastModified > cutoff) {
-          report.tooRecent += 1;
-          return false;
-        }
-        return true;
-      });
-      const referencedKeys =
-        area === 'active'
-          ? await this.findReferencedKeys(oldObjects)
-          : new Set<string>();
+      const fileRecords = await this.findFileRecords(page.objects);
 
-      for (const object of oldObjects) {
-        if (referencedKeys.has(object.storageKey)) {
+      for (const object of page.objects) {
+        const fileRecord = fileRecords.get(object.storageKey);
+        if (fileRecord && fileRecord.removedAt === null) {
           report.referenced += 1;
+          continue;
+        }
+        if (
+          object.lastModified > cutoff ||
+          (fileRecord?.removedAt && fileRecord.removedAt > cutoff)
+        ) {
+          report.tooRecent += 1;
           continue;
         }
         report.candidates += 1;
@@ -96,16 +94,18 @@ export class OrphanedFileCleanupService {
     } while (cursor);
   }
 
-  private async findReferencedKeys(
+  private async findFileRecords(
     objects: ListedFileObject[],
-  ): Promise<Set<string>> {
-    if (!objects.length) return new Set();
+  ): Promise<Map<string, { removedAt: Date | null }>> {
+    if (!objects.length) return new Map();
     const rows = await this.prisma.fileAttachment.findMany({
       where: {
         storageKey: { in: objects.map((object) => object.storageKey) },
       },
-      select: { storageKey: true },
+      select: { storageKey: true, removedAt: true },
     });
-    return new Set(rows.map((row) => row.storageKey));
+    return new Map(
+      rows.map((row) => [row.storageKey, { removedAt: row.removedAt }]),
+    );
   }
 }

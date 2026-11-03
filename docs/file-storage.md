@@ -61,7 +61,10 @@ npm.cmd run files:cleanup --workspace apps/api -- --apply
 ```
 
 Cleanup only considers objects older than `FILE_ORPHAN_MIN_AGE_SECONDS` (one day by
-default). Active objects are deleted only when no `file_attachments` row references
-their generated key. The minimum age prevents cleanup from racing an upload between
-object promotion and database commit. Quarantine objects older than the cutoff can
-be removed because they are never downloadable or referenced as active content.
+default). Active database records are never deleted. Objects belonging to soft-
+removed records become eligible only after both the record removal and object age
+pass the cutoff; unreferenced objects use the object-age cutoff. Failed API deletes
+keep their soft-removed metadata and can be retried by repeating the removal request
+or rerunning cleanup after retention. Cleanup errors are surfaced and can be retried
+by rerunning the command. The minimum age prevents cleanup from racing an upload
+between object promotion and database commit.
