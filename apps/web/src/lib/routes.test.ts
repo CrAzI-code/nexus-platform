@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   organizationAuditLogsPath,
   organizationDashboardPath,
+  organizationFilesPath,
   organizationMembersPath,
 } from "./routes";
 
@@ -27,6 +28,9 @@ describe("organization navigation routes", () => {
     );
     expect(organizationAuditLogsPath("org/123")).toBe(
       "/organizations/org%2F123/audit-logs",
+    );
+    expect(organizationFilesPath("org/123")).toBe(
+      "/organizations/org%2F123/files",
     );
   });
 });

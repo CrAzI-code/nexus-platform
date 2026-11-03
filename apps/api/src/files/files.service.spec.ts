@@ -93,6 +93,7 @@ function makeFileRow(overrides: Record<string, unknown> = {}) {
     createdAt: now,
     removedAt: null,
     uploaderMembership: { user: { name: 'Alex' } },
+    project: { name: 'Roadmap' },
     taskAttachment: null,
     ...overrides,
   };
@@ -304,6 +305,100 @@ describe('FilesService', () => {
 
     await expect(
       service.listProjectFiles(organizationId, projectId, userId, {
+        page: 1,
+        pageSize: 25,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transaction.fileAttachment.findMany).not.toHaveBeenCalled();
+  });
+
+  it('lists organization files for Owners/Admins across the organization', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'ADMIN',
+    });
+    transaction.fileAttachment.findMany.mockResolvedValue([
+      makeFileRow({
+        scanStatus: 'UNSCANNED',
+        project: { name: 'Roadmap' },
+        taskAttachment: {
+          taskId,
+          task: { title: 'Review launch plan' },
+        },
+      }),
+    ]);
+
+    await expect(
+      service.listOrganizationFiles(organizationId, userId, {
+        page: 1,
+        pageSize: 25,
+        search: 'notes',
+        type: 'text',
+        scanStatus: 'UNSCANNED',
+        sort: 'name',
+      }),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          id: fileId,
+          projectName: 'Roadmap',
+          taskId,
+          taskTitle: 'Review launch plan',
+          scanStatus: 'UNSCANNED',
+        },
+      ],
+      hasMore: false,
+    });
+
+    expect(transaction.fileAttachment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId,
+          removedAt: null,
+          originalName: { contains: 'notes', mode: 'insensitive' },
+          mimeType: { startsWith: 'text/' },
+          scanStatus: 'UNSCANNED',
+        }),
+        orderBy: [{ originalName: 'asc' }, { id: 'asc' }],
+      }),
+    );
+    expect(transaction.fileAttachment.findMany.mock.calls[0][0].where)
+      .not.toHaveProperty('project');
+  });
+
+  it('limits organization file results for members to active project membership', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'MEMBER',
+    });
+
+    await service.listOrganizationFiles(organizationId, userId, {
+      page: 1,
+      pageSize: 25,
+    });
+
+    expect(transaction.fileAttachment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          project: {
+            is: {
+              members: {
+                some: {
+                  userId,
+                  status: 'ACTIVE',
+                  membership: { status: 'ACTIVE' },
+                },
+              },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('does not list organization files without active organization membership', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.listOrganizationFiles(organizationId, userId, {
         page: 1,
         pageSize: 25,
       }),

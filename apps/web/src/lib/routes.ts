@@ -15,3 +15,7 @@ export function organizationMembersPath(organizationId: string): string {
 export function organizationAuditLogsPath(organizationId: string): string {
   return `/organizations/${encodeURIComponent(organizationId)}/audit-logs`;
 }
+
+export function organizationFilesPath(organizationId: string): string {
+  return `/organizations/${encodeURIComponent(organizationId)}/files`;
+}

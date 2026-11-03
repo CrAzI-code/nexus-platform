@@ -6,6 +6,7 @@ import type { App } from 'supertest/types.js';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard.js';
 import { ClerkAuthService } from '../auth/clerk-auth.service.js';
 import { FilesController } from './files.controller.js';
+import { OrganizationFilesController } from './organization-files.controller.js';
 import { FilesService } from './files.service.js';
 
 const organizationId = 'c458281a-f25e-4be6-ae65-b16ee7bbd66c';
@@ -14,6 +15,7 @@ const fileId = 'dbfc6f65-a333-4f4a-9c52-633065909d16';
 
 const files = {
   listProjectFiles: vi.fn(),
+  listOrganizationFiles: vi.fn(),
   uploadProjectFile: vi.fn(),
   listTaskAttachments: vi.fn(),
   uploadTaskAttachment: vi.fn(),
@@ -42,7 +44,7 @@ describe('FilesController HTTP authorization and streaming', () => {
       status: 'ACTIVE',
     });
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [FilesController],
+      controllers: [FilesController, OrganizationFilesController],
       providers: [
         ClerkAuthGuard,
         { provide: ClerkAuthService, useValue: authentication },
@@ -62,6 +64,42 @@ describe('FilesController HTTP authorization and streaming', () => {
       )
       .expect(401);
     expect(files.getContent).not.toHaveBeenCalled();
+  });
+
+  it('rejects unauthenticated organization file-list requests', async () => {
+    await request(app.getHttpServer())
+      .get(`/organizations/${organizationId}/files`)
+      .expect(401);
+    expect(files.listOrganizationFiles).not.toHaveBeenCalled();
+  });
+
+  it('passes validated organization file filters to the service', async () => {
+    files.listOrganizationFiles.mockResolvedValue({
+      items: [],
+      page: 2,
+      pageSize: 25,
+      hasMore: false,
+    });
+
+    await request(app.getHttpServer())
+      .get(
+        `/organizations/${organizationId}/files?page=2&search=budget&type=documents&scanStatus=CLEAN&sort=name`,
+      )
+      .set('Authorization', 'Bearer test-token')
+      .expect(200);
+
+    expect(files.listOrganizationFiles).toHaveBeenCalledWith(
+      organizationId,
+      '4a42c365-ed61-4c80-a5a2-f3fcba6a71cb',
+      {
+        page: 2,
+        pageSize: 25,
+        search: 'budget',
+        type: 'documents',
+        scanStatus: 'CLEAN',
+        sort: 'name',
+      },
+    );
   });
 
   it('streams authorized content with private response headers', async () => {

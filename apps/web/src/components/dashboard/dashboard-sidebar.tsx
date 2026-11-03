@@ -8,6 +8,7 @@ import { Icon, type IconName } from "./icons";
 import {
   organizationAuditLogsPath,
   organizationDashboardPath,
+  organizationFilesPath,
   organizationMembersPath,
 } from "@/lib/routes";
 
@@ -15,7 +16,7 @@ export type DashboardSection = "home" | "work" | "projects";
 
 type DashboardSidebarProps = {
   activeSection: DashboardSection | null;
-  activeOrganizationPage?: "people" | "audit";
+  activeOrganizationPage?: "people" | "audit" | "files";
   workspaces: Workspace[];
   workspaceId: string;
   homeHref: string;
@@ -38,7 +39,6 @@ const primaryNavigation: {
 ];
 
 const upcomingNavigation: { label: string; icon: IconName }[] = [
-  { label: "Files", icon: "file" },
   { label: "Settings", icon: "settings" },
 ];
 
@@ -162,6 +162,18 @@ export function DashboardSidebar({
             <span>{item.label}</span>
           </Link>
         ))}
+        <Link
+          aria-current={
+            activeOrganizationPage === "files" ? "page" : undefined
+          }
+          className="nav-link"
+          href={organizationFilesPath(workspaceId)}
+          onClick={onMobileClose}
+          title="Files"
+        >
+          <Icon name="file" width={18} height={18} />
+          <span>Files</span>
+        </Link>
         <Link
           aria-current={
             activeOrganizationPage === "people" ? "page" : undefined

@@ -131,7 +131,9 @@ export function OrganizationShell({
     ? "audit"
     : pathname.endsWith("/members")
       ? "people"
-      : undefined;
+      : pathname.endsWith("/files")
+        ? "files"
+        : undefined;
   const homeHref = organizationDashboardPath(organizationId);
   const canViewAudit = workspace.role === "OWNER" || workspace.role === "ADMIN";
 

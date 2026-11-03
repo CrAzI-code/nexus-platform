@@ -20,6 +20,26 @@ export type FileAttachmentPage = {
   canUpload: boolean;
 };
 
+export type OrganizationFile = FileAttachment & {
+  projectName: string;
+  taskTitle: string | null;
+};
+
+export type OrganizationFileFilters = {
+  page: number;
+  search?: string;
+  type?: "images" | "documents" | "text";
+  scanStatus?: "CLEAN" | "UNSCANNED";
+  sort?: "recent" | "name" | "size";
+};
+
+export type OrganizationFilePage = {
+  items: OrganizationFile[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+};
+
 export type UploadProgress = (percentage: number) => void;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -67,6 +87,28 @@ function isFilePage(value: unknown): value is FileAttachmentPage {
     typeof value.pageSize === "number" &&
     typeof value.hasMore === "boolean" &&
     typeof value.canUpload === "boolean"
+  );
+}
+
+function isOrganizationFile(value: unknown): value is OrganizationFile {
+  return (
+    isRecord(value) &&
+    typeof value.projectName === "string" &&
+    (typeof value.taskTitle === "string" || value.taskTitle === null) &&
+    isFileAttachment(value)
+  );
+}
+
+function isOrganizationFilePage(
+  value: unknown,
+): value is OrganizationFilePage {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.items) &&
+    value.items.every(isOrganizationFile) &&
+    typeof value.page === "number" &&
+    typeof value.pageSize === "number" &&
+    typeof value.hasMore === "boolean"
   );
 }
 
@@ -122,6 +164,37 @@ async function readFilePage(response: Response): Promise<FileAttachmentPage> {
   const payload: unknown = await response.json();
   if (!isFilePage(payload)) {
     throw new Error("The server returned an unexpected file list.");
+  }
+  return payload;
+}
+
+export async function listOrganizationFiles(
+  token: string,
+  organizationId: string,
+  filters: OrganizationFileFilters,
+): Promise<OrganizationFilePage> {
+  const query = new URLSearchParams({
+    page: String(filters.page),
+    pageSize: String(pageSize),
+  });
+  if (filters.search) query.set("search", filters.search);
+  if (filters.type) query.set("type", filters.type);
+  if (filters.scanStatus) query.set("scanStatus", filters.scanStatus);
+  if (filters.sort) query.set("sort", filters.sort);
+
+  const response = await fetchApi(
+    `/organizations/${encodeURIComponent(organizationId)}/files?${query}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    throw new FileApiError(errorMessage(response.status), response.status);
+  }
+  const payload: unknown = await response.json();
+  if (!isOrganizationFilePage(payload)) {
+    throw new Error("The server returned an unexpected organization file list.");
   }
   return payload;
 }

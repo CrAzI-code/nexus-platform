@@ -53,7 +53,10 @@ const fileSelect = {
   uploaderMembership: {
     select: { user: { select: { name: true } } },
   },
-  taskAttachment: { select: { taskId: true } },
+  project: { select: { name: true } },
+  taskAttachment: {
+    select: { taskId: true, task: { select: { title: true } } },
+  },
 } satisfies Prisma.FileAttachmentSelect;
 
 type FileRecord = Prisma.FileAttachmentGetPayload<{
@@ -85,6 +88,18 @@ export interface FileAttachmentPage {
   pageSize: number;
   hasMore: boolean;
   canUpload: boolean;
+}
+
+export interface OrganizationFileResponse extends FileAttachmentResponse {
+  projectName: string;
+  taskTitle: string | null;
+}
+
+export interface OrganizationFilePage {
+  items: OrganizationFileResponse[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 }
 
 export interface FileContent {
@@ -127,6 +142,63 @@ export class FilesService {
     query: FileListQuery,
   ): Promise<FileAttachmentPage> {
     return this.listFiles(organizationId, projectId, taskId, userId, query);
+  }
+
+  async listOrganizationFiles(
+    organizationId: string,
+    userId: string,
+    query: FileListQuery,
+  ): Promise<OrganizationFilePage> {
+    return this.prisma.$transaction(async (transaction) => {
+      const membership = await transaction.organizationMembership.findFirst({
+        where: {
+          organizationId,
+          userId,
+          status: 'ACTIVE',
+          organization: { status: 'ACTIVE' },
+        },
+        select: { role: true },
+      });
+      if (!membership) throw new NotFoundException('Organization not found.');
+
+      const rows = await transaction.fileAttachment.findMany({
+        where: {
+          organizationId,
+          removedAt: null,
+          ...(membership.role === 'OWNER' || membership.role === 'ADMIN'
+            ? {}
+            : {
+                project: {
+                  is: {
+                    members: {
+                      some: {
+                        userId,
+                        status: 'ACTIVE',
+                        membership: { status: 'ACTIVE' },
+                      },
+                    },
+                  },
+                },
+              }),
+          ...this.getFileFilters(query),
+        },
+        select: fileSelect,
+        orderBy: this.getFileSort(query),
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize + 1,
+      });
+      const hasMore = rows.length > query.pageSize;
+      return {
+        items: rows.slice(0, query.pageSize).map((file) => ({
+          ...this.toResponse(file, membership.role, userId),
+          projectName: file.project.name,
+          taskTitle: file.taskAttachment?.task.title ?? null,
+        })),
+        page: query.page,
+        pageSize: query.pageSize,
+        hasMore,
+      };
+    });
   }
 
   async uploadProjectFile(
@@ -303,9 +375,10 @@ export class FilesService {
           projectId,
           removedAt: null,
           ...(taskId ? { taskAttachment: { is: { taskId } } } : {}),
+          ...this.getFileFilters(query),
         },
         select: fileSelect,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: this.getFileSort(query),
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize + 1,
       });
@@ -578,6 +651,36 @@ export class FilesService {
         role === 'ADMIN' ||
         role === 'MANAGER',
     };
+  }
+
+  private getFileFilters(query: FileListQuery): Prisma.FileAttachmentWhereInput {
+    return {
+      ...(query.search
+        ? { originalName: { contains: query.search, mode: 'insensitive' } }
+        : {}),
+      ...(query.scanStatus ? { scanStatus: query.scanStatus } : {}),
+      ...(query.type === 'images'
+        ? { mimeType: { startsWith: 'image/' } }
+        : query.type === 'text'
+          ? { mimeType: { startsWith: 'text/' } }
+          : query.type === 'documents'
+            ? {
+                mimeType: {
+                  in: ['application/pdf', 'text/plain', 'text/csv'],
+                },
+              }
+            : {}),
+    };
+  }
+
+  private getFileSort(
+    query: FileListQuery,
+  ): Prisma.FileAttachmentOrderByWithRelationInput[] {
+    if (query.sort === 'name') return [{ originalName: 'asc' }, { id: 'asc' }];
+    if (query.sort === 'size') {
+      return [{ sizeBytes: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }];
+    }
+    return [{ createdAt: 'desc' }, { id: 'desc' }];
   }
 
   private async scanQuarantinedFile(

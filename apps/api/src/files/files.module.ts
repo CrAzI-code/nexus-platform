@@ -12,6 +12,7 @@ import {
   LocalFileStorageProvider,
 } from './file-storage.js';
 import { FilesController } from './files.controller.js';
+import { OrganizationFilesController } from './organization-files.controller.js';
 import { FilesService } from './files.service.js';
 import {
   HttpMalwareScanner,
@@ -23,7 +24,7 @@ import { S3FileStorageProvider } from './s3-file-storage.js';
 
 @Module({
   imports: [AuthModule, PrismaModule],
-  controllers: [FilesController],
+  controllers: [FilesController, OrganizationFilesController],
   providers: [
     ClerkAuthGuard,
     FilesService,
