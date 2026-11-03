@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { AppModule } from './app.module.js';
+import { getWebCorsOrigin } from './cors.js';
 
 const logger = new Logger('Bootstrap');
 const apiEnvPath = fileURLToPath(new URL('../.env', import.meta.url));
@@ -86,9 +87,10 @@ logger.log(
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
-  if (process.env.NODE_ENV !== 'production') {
+  const webOrigin = getWebCorsOrigin(process.env);
+  if (webOrigin) {
     app.enableCors({
-      origin: 'http://localhost:3000',
+      origin: webOrigin,
       methods: ['GET', 'POST', 'PATCH', 'DELETE'],
       allowedHeaders: ['Authorization', 'Content-Type'],
     });

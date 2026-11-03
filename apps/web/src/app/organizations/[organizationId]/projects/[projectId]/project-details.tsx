@@ -15,6 +15,7 @@ import {
   type OrganizationProject,
   type ProjectInput,
 } from "@/lib/organizations";
+import { organizationDashboardPath } from "@/lib/routes";
 
 type ProjectDetailsProps = {
   organizationId: string;
@@ -138,7 +139,10 @@ export default function ProjectDetails({
   return (
     <main className="project-details-page">
       <div className="project-details-shell">
-        <Link className="project-back-link" href="/">
+        <Link
+          className="project-back-link"
+          href={organizationDashboardPath(organizationId)}
+        >
           ← Back to workspace
         </Link>
 

@@ -90,6 +90,14 @@ export const TaskPriority = {
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
 
 
+export const FileScanStatus = {
+  CLEAN: 'CLEAN',
+  UNSCANNED: 'UNSCANNED'
+} as const
+
+export type FileScanStatus = (typeof FileScanStatus)[keyof typeof FileScanStatus]
+
+
 export const TaskActivityType = {
   CREATED: 'CREATED',
   UPDATED: 'UPDATED',

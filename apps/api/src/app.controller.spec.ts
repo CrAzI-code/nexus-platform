@@ -32,13 +32,12 @@ describe('AppController', () => {
   });
 
   describe('database health', () => {
-    it('returns the database status and user count', async () => {
+    it('returns the database status without exposing record counts', async () => {
       prisma.user.count.mockResolvedValue(3);
 
       await expect(appController.getDatabaseHealth()).resolves.toEqual({
         status: 'ok',
         database: 'connected',
-        users: 3,
       });
     });
 

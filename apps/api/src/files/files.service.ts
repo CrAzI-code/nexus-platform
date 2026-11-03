@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -6,16 +7,27 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
 import { Prisma } from '../generated/prisma/client.js';
 import type { OrganizationRole } from '../generated/prisma/client.js';
 import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import { PrismaService } from '../prisma.service.js';
 import {
+  FILE_STORAGE_CONFIG,
+  type FilesConfiguration,
+} from './file-storage.config.js';
+import {
   FILE_STORAGE_PROVIDER,
   type FileStorageProvider,
 } from './file-storage.js';
+import {
+  MALWARE_SCANNER_PROVIDER,
+  type MalwareScanner,
+  type MalwareScanResult,
+} from './malware-scanner.js';
 import {
   getMaximumFileUploadSize,
   supportsInlinePreview,
@@ -35,6 +47,7 @@ const fileSelect = {
   originalName: true,
   mimeType: true,
   sizeBytes: true,
+  scanStatus: true,
   createdAt: true,
   removedAt: true,
   uploaderMembership: {
@@ -59,6 +72,7 @@ export interface FileAttachmentResponse {
   originalName: string;
   mimeType: string;
   sizeBytes: number;
+  scanStatus: 'CLEAN' | 'UNSCANNED';
   uploadedAt: Date;
   uploaderName: string;
   canPreview: boolean;
@@ -74,7 +88,7 @@ export interface FileAttachmentPage {
 }
 
 export interface FileContent {
-  buffer: Buffer;
+  stream: Readable;
   mimeType: string;
   sizeBytes: number;
   originalName: string;
@@ -90,6 +104,10 @@ export class FilesService {
     private readonly prisma: PrismaService,
     @Inject(FILE_STORAGE_PROVIDER)
     private readonly storage: FileStorageProvider,
+    @Inject(MALWARE_SCANNER_PROVIDER)
+    private readonly scanner: MalwareScanner,
+    @Inject(FILE_STORAGE_CONFIG)
+    private readonly configuration: FilesConfiguration,
   ) {}
 
   listProjectFiles(
@@ -117,13 +135,7 @@ export class FilesService {
     userId: string,
     file: UploadFileData,
   ): Promise<FileAttachmentResponse> {
-    return this.upload(
-      organizationId,
-      projectId,
-      undefined,
-      userId,
-      file,
-    );
+    return this.upload(organizationId, projectId, undefined, userId, file);
   }
 
   async uploadTaskAttachment(
@@ -149,12 +161,26 @@ export class FilesService {
         projectId,
         userId,
       );
-      return this.findActiveFile(transaction, organizationId, projectId, fileId);
+      return this.findActiveFile(
+        transaction,
+        organizationId,
+        projectId,
+        fileId,
+      );
     });
 
-    let buffer: Buffer;
+    if (
+      this.configuration.security.scanRequired &&
+      file.scanStatus !== 'CLEAN'
+    ) {
+      throw new ServiceUnavailableException(
+        'File security verification is required before download.',
+      );
+    }
+
+    let storedObject;
     try {
-      buffer = await this.storage.read(file.storageKey);
+      storedObject = await this.storage.openActive(file.storageKey);
     } catch (error) {
       this.logStorageFailure('read', error);
       if (hasErrorCode(error, 'ENOENT')) {
@@ -163,10 +189,8 @@ export class FilesService {
       throw new InternalServerErrorException('File content is unavailable.');
     }
 
-    if (
-      buffer.length !== file.sizeBytes ||
-      !this.hasStoredContentSignature(file.mimeType, buffer)
-    ) {
+    if (storedObject.sizeBytes !== file.sizeBytes) {
+      storedObject.stream.destroy();
       this.logger.warn(
         JSON.stringify({ event: 'stored_file_integrity_check_failed' }),
       );
@@ -174,7 +198,7 @@ export class FilesService {
     }
 
     return {
-      buffer,
+      stream: storedObject.stream,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       originalName: file.originalName,
@@ -217,7 +241,8 @@ export class FilesService {
         },
         data: { removedAt },
       });
-      if (update.count !== 1) throw new ConflictException('File was already removed.');
+      if (update.count !== 1)
+        throw new ConflictException('File was already removed.');
 
       await AuditLogsService.record(transaction, {
         organizationId,
@@ -237,7 +262,7 @@ export class FilesService {
     });
 
     try {
-      await this.storage.remove(storageKey);
+      await this.storage.remove(storageKey, 'active');
     } catch (error) {
       this.logStorageFailure('remove', error);
     }
@@ -273,9 +298,7 @@ export class FilesService {
           organizationId,
           projectId,
           removedAt: null,
-          ...(taskId
-            ? { taskAttachment: { is: { taskId } } }
-            : {}),
+          ...(taskId ? { taskAttachment: { is: { taskId } } } : {}),
         },
         select: fileSelect,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -328,11 +351,44 @@ export class FilesService {
 
     const storageKey = randomUUID();
     try {
-      await this.storage.write(storageKey, file.buffer);
+      await this.storage.putQuarantined(storageKey, file.buffer, file.mimeType);
     } catch (error) {
-      this.logStorageFailure('write', error);
+      this.logStorageFailure('quarantine_write', error);
       throw new InternalServerErrorException('File storage is unavailable.');
     }
+
+    const scanResult = await this.scanQuarantinedFile(storageKey, file);
+    if (scanResult.status === 'infected') {
+      await this.removeQuietly(storageKey, 'quarantine', 'infected_cleanup');
+      throw new BadRequestException('The file failed its security scan.');
+    }
+    if (
+      scanResult.status === 'unavailable' &&
+      this.configuration.security.scanRequired
+    ) {
+      await this.removeQuietly(
+        storageKey,
+        'quarantine',
+        'scanner_unavailable_cleanup',
+      );
+      throw new ServiceUnavailableException(
+        'File security scanning is temporarily unavailable.',
+      );
+    }
+
+    try {
+      await this.storage.promoteQuarantined(storageKey);
+    } catch (error) {
+      this.logStorageFailure('quarantine_promote', error);
+      await this.removeQuietly(storageKey, 'quarantine', 'promote_cleanup');
+      await this.removeQuietly(storageKey, 'active', 'promote_cleanup');
+      throw new InternalServerErrorException('File storage is unavailable.');
+    }
+
+    const scanStatus =
+      scanResult.status === 'clean'
+        ? ('CLEAN' as const)
+        : ('UNSCANNED' as const);
     try {
       return await this.prisma.$transaction(async (transaction) => {
         const access = await this.requireProjectAccess(
@@ -365,6 +421,7 @@ export class FilesService {
             originalName: file.originalName,
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
+            scanStatus,
             ...(taskId
               ? {
                   taskAttachment: {
@@ -384,6 +441,7 @@ export class FilesService {
           after: {
             mimeType: created.mimeType,
             sizeBytes: created.sizeBytes,
+            scanStatus: created.scanStatus,
             taskId: created.taskAttachment?.taskId ?? null,
           },
         });
@@ -391,7 +449,7 @@ export class FilesService {
       });
     } catch (error) {
       try {
-        await this.storage.remove(storageKey);
+        await this.storage.remove(storageKey, 'active');
       } catch (cleanupError) {
         this.logStorageFailure('upload_rollback', cleanupError);
       }
@@ -506,6 +564,7 @@ export class FilesService {
       originalName: file.originalName,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
+      scanStatus: file.scanStatus,
       uploadedAt: file.createdAt,
       uploaderName: file.uploaderMembership.user.name,
       canPreview: supportsInlinePreview(file.mimeType),
@@ -517,20 +576,37 @@ export class FilesService {
     };
   }
 
-  private hasStoredContentSignature(mimeType: string, buffer: Buffer): boolean {
+  private async scanQuarantinedFile(
+    storageKey: string,
+    file: ReturnType<typeof validateFileUpload>,
+  ): Promise<MalwareScanResult> {
     try {
-      validateFileUpload(
-        {
-          originalname: `stored${extensionForMimeType(mimeType)}`,
-          mimetype: mimeType,
-          size: buffer.length,
-          buffer,
-        },
-        this.maxUploadBytes,
+      return await this.scanner.scan({
+        storageKey,
+        content: file.buffer,
+        mimeType: file.mimeType,
+        originalName: file.originalName,
+      });
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'malware_scanner_failure',
+          errorCode: safeErrorCode(error),
+        }),
       );
-      return true;
-    } catch {
-      return false;
+      return { status: 'unavailable' };
+    }
+  }
+
+  private async removeQuietly(
+    storageKey: string,
+    area: 'active' | 'quarantine',
+    operation: string,
+  ): Promise<void> {
+    try {
+      await this.storage.remove(storageKey, area);
+    } catch (error) {
+      this.logStorageFailure(operation, error);
     }
   }
 
@@ -542,25 +618,6 @@ export class FilesService {
         errorCode: safeErrorCode(error),
       }),
     );
-  }
-}
-
-function extensionForMimeType(mimeType: string): string {
-  switch (mimeType) {
-    case 'application/pdf':
-      return '.pdf';
-    case 'image/png':
-      return '.png';
-    case 'image/jpeg':
-      return '.jpg';
-    case 'image/webp':
-      return '.webp';
-    case 'text/plain':
-      return '.txt';
-    case 'text/csv':
-      return '.csv';
-    default:
-      return '';
   }
 }
 

@@ -12,6 +12,7 @@ import {
   type ManagedMemberRole,
   type OrganizationTeam,
 } from "@/lib/team";
+import { organizationDashboardPath } from "@/lib/routes";
 
 const managedRoles: ManagedMemberRole[] = ["ADMIN", "MANAGER", "MEMBER"];
 
@@ -218,7 +219,10 @@ export default function TeamManagement({
 
   return (
     <main className="team-page-shell">
-      <Link className="project-back-link" href="/">
+      <Link
+        className="project-back-link"
+        href={organizationDashboardPath(organizationId)}
+      >
         ← Back to workspace
       </Link>
       {error && !team ? (

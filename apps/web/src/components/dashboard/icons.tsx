@@ -13,6 +13,7 @@ export type IconName =
   | "clock"
   | "close"
   | "filter"
+  | "file"
   | "grid"
   | "info"
   | "menu"
@@ -79,6 +80,12 @@ const paths: Record<IconName, ReactNode> = {
       <path d="M4 6h16M7 12h10m-7 6h4" />
     </>
   ),
+  file: (
+    <>
+      <path d="M6 2h8l4 4v16H6z" />
+      <path d="M14 2v5h5M9 13h6M9 17h6" />
+    </>
+  ),
   grid: (
     <>
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -95,9 +102,7 @@ const paths: Record<IconName, ReactNode> = {
   ),
   menu: (
     <>
-      <circle cx="5" cy="12" r="1" />
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="19" cy="12" r="1" />
+      <path d="M4 7h16M4 12h16M4 17h16" />
     </>
   ),
   message: (

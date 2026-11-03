@@ -213,6 +213,7 @@ export const FileAttachmentScalarFieldEnum = {
   originalName: 'originalName',
   mimeType: 'mimeType',
   sizeBytes: 'sizeBytes',
+  scanStatus: 'scanStatus',
   createdAt: 'createdAt',
   removedAt: 'removedAt'
 } as const

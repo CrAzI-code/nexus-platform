@@ -22,7 +22,7 @@ describe('NotificationStreamService', () => {
           resourceType: 'ORGANIZATION',
           resourceId: 'organization-1',
           readAt: null,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
         },
       },
     ]);
@@ -56,7 +56,7 @@ describe('NotificationStreamService', () => {
           resourceType: 'ORGANIZATION',
           resourceId: 'organization-1',
           readAt: null,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
         },
       },
     ]);
@@ -84,7 +84,7 @@ describe('NotificationStreamService', () => {
           resourceType: 'ORGANIZATION',
           resourceId: 'organization-1',
           readAt: null,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(),
         },
       },
     ]);

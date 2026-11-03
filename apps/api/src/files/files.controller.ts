@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   Param,
   ParseUUIDPipe,
   Post,
@@ -14,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { pipeline } from 'node:stream/promises';
 import type { AuthenticatedUser } from '../auth/authenticated-user.js';
 import { ClerkAuthGuard } from '../auth/clerk-auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
@@ -143,7 +145,14 @@ export class FilesController {
       'Content-Disposition',
       formatContentDisposition(requestedDisposition, content.originalName),
     );
-    response.send(content.buffer);
+    try {
+      await pipeline(content.stream, response);
+    } catch {
+      if (!response.headersSent) {
+        throw new InternalServerErrorException('File content is unavailable.');
+      }
+      response.destroy();
+    }
   }
 
   @Delete('files/:fileId')
@@ -165,8 +174,7 @@ function formatContentDisposition(
     originalName.replace(/[^\x20-\x7e]|["\\;]/gu, '_') || 'download';
   const encodedName = encodeURIComponent(originalName).replace(
     /['()*]/gu,
-    (character) =>
-      `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
   return `${disposition}; filename="${fallbackName}"; filename*=UTF-8''${encodedName}`;
 }

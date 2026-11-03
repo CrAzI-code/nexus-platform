@@ -1,15 +1,22 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma.service.js';
+import {
+  FILE_STORAGE_CONFIG,
+  getFilesConfiguration,
+  type FilesConfiguration,
+} from './file-storage.config.js';
 import {
   FILE_STORAGE_PROVIDER,
   type FileStorageProvider,
 } from './file-storage.js';
 import { FilesService } from './files.service.js';
+import {
+  MALWARE_SCANNER_PROVIDER,
+  type MalwareScanner,
+} from './malware-scanner.js';
 
 const now = new Date('2026-11-02T18:00:00.000Z');
 const organizationId = 'c458281a-f25e-4be6-ae65-b16ee7bbd66c';
@@ -39,10 +46,34 @@ const prisma = {
 };
 
 const storage = {
-  write: vi.fn(async (_storageKey: string, _content: Buffer) => undefined),
-  read: vi.fn(async (_storageKey: string) => Buffer.from('safe')),
-  remove: vi.fn(async (_storageKey: string) => undefined),
+  putQuarantined: vi.fn(
+    async (_storageKey: string, _content: Buffer, _mimeType: string) =>
+      undefined,
+  ),
+  promoteQuarantined: vi.fn(async (_storageKey: string) => undefined),
+  openActive: vi.fn(async (_storageKey: string) => ({
+    stream: Readable.from(Buffer.from('safe')),
+    sizeBytes: 4,
+  })),
+  remove: vi.fn(
+    async (_storageKey: string, _area: 'active' | 'quarantine') => undefined,
+  ),
+  exists: vi.fn(async () => true),
+  list: vi.fn(async () => ({ objects: [] })),
 } satisfies FileStorageProvider;
+
+const scanner = {
+  scan: vi.fn<MalwareScanner['scan']>(async () => ({ status: 'clean' })),
+} satisfies MalwareScanner;
+
+const configuration: FilesConfiguration = {
+  storage: { driver: 'local' },
+  security: {
+    scanRequired: false,
+    scanner: { driver: 'none' },
+    orphanMinimumAgeMs: 86_400_000,
+  },
+};
 
 function makeFileRow(overrides: Record<string, unknown> = {}) {
   return {
@@ -54,6 +85,7 @@ function makeFileRow(overrides: Record<string, unknown> = {}) {
     originalName: 'notes.txt',
     mimeType: 'text/plain',
     sizeBytes: 4,
+    scanStatus: 'CLEAN',
     createdAt: now,
     removedAt: null,
     uploaderMembership: { user: { name: 'Alex' } },
@@ -62,10 +94,7 @@ function makeFileRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function textFile(
-  originalname = 'notes.txt',
-  content = Buffer.from('safe'),
-) {
+function textFile(originalname = 'notes.txt', content = Buffer.from('safe')) {
   return {
     originalname,
     mimetype: originalname.endsWith('.csv') ? 'text/csv' : 'text/plain',
@@ -94,15 +123,23 @@ describe('FilesService', () => {
       async (operation: (tx: typeof transaction) => Promise<unknown>) =>
         operation(transaction),
     );
-    storage.write.mockResolvedValue(undefined);
-    storage.read.mockResolvedValue(Buffer.from('safe'));
+    configuration.security.scanRequired = false;
+    storage.putQuarantined.mockResolvedValue(undefined);
+    storage.promoteQuarantined.mockResolvedValue(undefined);
+    storage.openActive.mockResolvedValue({
+      stream: Readable.from(Buffer.from('safe')),
+      sizeBytes: 4,
+    });
     storage.remove.mockResolvedValue(undefined);
+    scanner.scan.mockResolvedValue({ status: 'clean' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FilesService,
         { provide: PrismaService, useValue: prisma },
         { provide: FILE_STORAGE_PROVIDER, useValue: storage },
+        { provide: MALWARE_SCANNER_PROVIDER, useValue: scanner },
+        { provide: FILE_STORAGE_CONFIG, useValue: configuration },
       ],
     }).compile();
     service = module.get(FilesService);
@@ -118,17 +155,15 @@ describe('FilesService', () => {
         return result;
       },
     );
-    storage.write.mockImplementation(async () => {
-      operations.push('storage-write');
+    storage.putQuarantined.mockImplementation(async () => {
+      operations.push('quarantine-write');
+    });
+    storage.promoteQuarantined.mockImplementation(async () => {
+      operations.push('storage-promote');
     });
 
     await expect(
-      service.uploadProjectFile(
-        organizationId,
-        projectId,
-        userId,
-        textFile(),
-      ),
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
     ).resolves.toMatchObject({
       id: fileId,
       originalName: 'notes.txt',
@@ -140,7 +175,8 @@ describe('FilesService', () => {
     expect(operations).toEqual([
       'transaction-start',
       'transaction-end',
-      'storage-write',
+      'quarantine-write',
+      'storage-promote',
       'transaction-start',
       'transaction-end',
     ]);
@@ -153,6 +189,7 @@ describe('FilesService', () => {
           originalName: 'notes.txt',
           mimeType: 'text/plain',
           sizeBytes: 4,
+          scanStatus: 'CLEAN',
         }),
       }),
     );
@@ -163,7 +200,12 @@ describe('FilesService', () => {
           actorId: userId,
           action: 'FILE_UPLOADED',
           targetType: 'FILE_ATTACHMENT',
-          after: { mimeType: 'text/plain', sizeBytes: 4, taskId: null },
+          after: {
+            mimeType: 'text/plain',
+            sizeBytes: 4,
+            scanStatus: 'CLEAN',
+            taskId: null,
+          },
         }),
       }),
     );
@@ -171,21 +213,16 @@ describe('FilesService', () => {
 
   it('rejects invalid contents before touching storage or database', async () => {
     await expect(
-      service.uploadProjectFile(
-        organizationId,
-        projectId,
-        userId,
-        {
-          originalname: 'image.png',
-          mimetype: 'image/png',
-          size: Buffer.from('not a png').length,
-          buffer: Buffer.from('not a png'),
-        },
-      ),
+      service.uploadProjectFile(organizationId, projectId, userId, {
+        originalname: 'image.png',
+        mimetype: 'image/png',
+        size: Buffer.from('not a png').length,
+        buffer: Buffer.from('not a png'),
+      }),
     ).rejects.toThrow('content does not match');
 
     expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(storage.write).not.toHaveBeenCalled();
+    expect(storage.putQuarantined).not.toHaveBeenCalled();
   });
 
   it('denies access to projects outside the user organization and membership scope', async () => {
@@ -212,7 +249,7 @@ describe('FilesService', () => {
         textFile(),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
-    expect(storage.write).not.toHaveBeenCalled();
+    expect(storage.putQuarantined).not.toHaveBeenCalled();
   });
 
   it('creates a tenant-constrained task association in the metadata transaction', async () => {
@@ -244,7 +281,12 @@ describe('FilesService', () => {
     expect(transaction.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          after: { mimeType: 'text/plain', sizeBytes: 4, taskId },
+          after: {
+            mimeType: 'text/plain',
+            sizeBytes: 4,
+            scanStatus: 'CLEAN',
+            taskId,
+          },
         }),
       }),
     );
@@ -266,15 +308,10 @@ describe('FilesService', () => {
   });
 
   it('does not persist metadata when private storage rejects an upload', async () => {
-    storage.write.mockRejectedValue(new Error('private path detail'));
+    storage.putQuarantined.mockRejectedValue(new Error('private path detail'));
 
     await expect(
-      service.uploadProjectFile(
-        organizationId,
-        projectId,
-        userId,
-        textFile(),
-      ),
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
     ).rejects.toThrow('File storage is unavailable.');
     expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
     expect(transaction.auditLog.create).not.toHaveBeenCalled();
@@ -286,7 +323,7 @@ describe('FilesService', () => {
     await expect(
       service.getContent(organizationId, projectId, fileId, userId),
     ).rejects.toBeInstanceOf(NotFoundException);
-    expect(storage.read).not.toHaveBeenCalled();
+    expect(storage.openActive).not.toHaveBeenCalled();
   });
 
   it('limits file removal to its uploader or a project manager', async () => {
@@ -323,40 +360,134 @@ describe('FilesService', () => {
         }),
       }),
     );
-    expect(storage.remove).toHaveBeenCalledWith(storageKey);
+    expect(storage.remove).toHaveBeenCalledWith(storageKey, 'active');
   });
 
   it('cleans up stored bytes when metadata or audit persistence fails', async () => {
-    transaction.auditLog.create.mockRejectedValue(new Error('database failure'));
+    transaction.auditLog.create.mockRejectedValue(
+      new Error('database failure'),
+    );
 
     await expect(
-      service.uploadProjectFile(
-        organizationId,
-        projectId,
-        userId,
-        textFile(),
-      ),
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
     ).rejects.toThrow('database failure');
-    expect(storage.remove).toHaveBeenCalledTimes(1);
+    expect(storage.remove).toHaveBeenCalledWith(
+      expect.stringMatching(/^[0-9a-f-]{36}$/u),
+      'active',
+    );
   });
 
   it('serves validated content only after metadata lookup and access checks', async () => {
     await expect(
       service.getContent(organizationId, projectId, fileId, userId),
     ).resolves.toMatchObject({
-      buffer: Buffer.from('safe'),
       mimeType: 'text/plain',
       sizeBytes: 4,
       canPreview: false,
     });
-    expect(storage.read).toHaveBeenCalledWith(storageKey);
+    expect(storage.openActive).toHaveBeenCalledWith(storageKey);
   });
 
   it('does not disclose storage details when reading fails', async () => {
-    storage.read.mockRejectedValue(new Error('private path detail'));
+    storage.openActive.mockRejectedValue(new Error('private path detail'));
 
     await expect(
       service.getContent(organizationId, projectId, fileId, userId),
     ).rejects.toThrow('File content is unavailable.');
+  });
+
+  it('rejects infected quarantined content and never promotes or persists it', async () => {
+    scanner.scan.mockResolvedValue({ status: 'infected' });
+
+    await expect(
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
+    ).rejects.toThrow('failed its security scan');
+
+    expect(storage.promoteQuarantined).not.toHaveBeenCalled();
+    expect(storage.remove).toHaveBeenCalledWith(
+      expect.any(String),
+      'quarantine',
+    );
+    expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
+  });
+
+  it('fails safely when scanning is required but unavailable', async () => {
+    configuration.security.scanRequired = true;
+    scanner.scan.mockResolvedValue({ status: 'unavailable' });
+
+    await expect(
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
+    ).rejects.toThrow('security scanning is temporarily unavailable');
+
+    expect(storage.promoteQuarantined).not.toHaveBeenCalled();
+    expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
+  });
+
+  it('fails safely when the configured production scanner throws', async () => {
+    configuration.security.scanRequired = getFilesConfiguration({
+      NODE_ENV: 'production',
+      FILE_STORAGE_DRIVER: 's3',
+      FILE_S3_BUCKET: 'private-nexus-files',
+      FILE_S3_REGION: 'eu-west-1',
+    }).security.scanRequired;
+    scanner.scan.mockRejectedValue(new Error('scanner connection failed'));
+
+    await expect(
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
+    ).rejects.toThrow('security scanning is temporarily unavailable');
+
+    expect(storage.promoteQuarantined).not.toHaveBeenCalled();
+    expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
+  });
+
+  it('returns not found for a missing private object without exposing provider details', async () => {
+    storage.openActive.mockRejectedValue(
+      Object.assign(new Error('NoSuchKey private bucket detail'), {
+        code: 'ENOENT',
+      }),
+    );
+
+    await expect(
+      service.getContent(organizationId, projectId, fileId, userId),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('blocks attempts to download unscanned files under production policy', async () => {
+    configuration.security.scanRequired = getFilesConfiguration({
+      NODE_ENV: 'production',
+      FILE_STORAGE_DRIVER: 's3',
+      FILE_S3_BUCKET: 'private-nexus-files',
+      FILE_S3_REGION: 'eu-west-1',
+    }).security.scanRequired;
+    transaction.fileAttachment.findFirst.mockResolvedValue(
+      makeFileRow({ scanStatus: 'UNSCANNED' }),
+    );
+
+    await expect(
+      service.getContent(organizationId, projectId, fileId, userId),
+    ).rejects.toThrow('security verification is required');
+    expect(storage.openActive).not.toHaveBeenCalled();
+  });
+
+  it('does not persist an unscanned upload when production scanner configuration is missing', async () => {
+    const productionConfiguration = getFilesConfiguration({
+      NODE_ENV: 'production',
+      FILE_STORAGE_DRIVER: 's3',
+      FILE_S3_BUCKET: 'private-nexus-files',
+      FILE_S3_REGION: 'eu-west-1',
+    });
+    configuration.security.scanRequired =
+      productionConfiguration.security.scanRequired;
+    scanner.scan.mockResolvedValue({ status: 'unavailable' });
+
+    await expect(
+      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
+    ).rejects.toThrow('security scanning is temporarily unavailable');
+
+    expect(productionConfiguration.security.scanner).toEqual({
+      driver: 'none',
+    });
+    expect(storage.promoteQuarantined).not.toHaveBeenCalled();
+    expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
   });
 });

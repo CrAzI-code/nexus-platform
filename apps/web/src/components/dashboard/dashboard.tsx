@@ -1,18 +1,16 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
-import { useEffect, useMemo, useState } from "react";
-import {
-  initialActivity,
-  type Activity,
-  type Task,
-  type Workspace,
-} from "./dashboard-data";
+import { UserButton, useAuth, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { Task, Workspace } from "./dashboard-data";
 import { DashboardSidebar, type DashboardSection } from "./dashboard-sidebar";
 import {
   ActivitySection,
   OverviewSection,
   ProjectsSection,
+  QuickActionsSection,
+  TaskOverviewSection,
   TasksSection,
 } from "./dashboard-sections";
 import { Icon } from "./icons";
@@ -27,16 +25,29 @@ import {
   type ProjectInput,
 } from "@/lib/organizations";
 import { listProjectTasks, TaskApiError } from "@/lib/tasks";
+import { getOrganizationTeam } from "@/lib/team";
+import { listOrganizationAuditLogs, type AuditLogItem } from "@/lib/audit-logs";
+import { organizationDashboardPath } from "@/lib/routes";
 
 const EMPTY_PROJECTS: OrganizationProject[] = [];
 
-export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
+export default function Dashboard({
+  workspaces,
+  initialWorkspaceId,
+}: {
+  workspaces: Workspace[];
+  initialWorkspaceId?: string;
+}) {
   const { getToken } = useAuth();
-  const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? "");
+  const { user } = useUser();
+  const router = useRouter();
+  const initialWorkspace = workspaces.find((item) => item.id === initialWorkspaceId)
+    ?? workspaces[0];
+  const [workspaceId, setWorkspaceId] = useState(initialWorkspace?.id ?? "");
   const [activeSection, setActiveSection] = useState<DashboardSection>("home");
   const [search, setSearch] = useState("");
-  const [activities] = useState<Activity[]>(initialActivity);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [projectLoad, setProjectLoad] = useState<{
     organizationId: string;
     projects: OrganizationProject[];
@@ -53,6 +64,17 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
     tasks: Task[];
     error: string | null;
   }>({ organizationId: "", tasks: [], error: null });
+  const [memberLoad, setMemberLoad] = useState<{
+    organizationId: string;
+    count: number | null;
+    error: string | null;
+  }>({ organizationId: "", count: null, error: null });
+  const [activityLoad, setActivityLoad] = useState<{
+    organizationId: string;
+    items: AuditLogItem[];
+    error: string | null;
+  }>({ organizationId: "", items: [], error: null });
+  const [activityRetry, setActivityRetry] = useState(0);
 
   const workspace = workspaces.find((item) => item.id === workspaceId) ?? workspaces[0];
   const isProjectsLoading = projectLoad.organizationId !== workspaceId;
@@ -63,10 +85,22 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
     taskLoad.organizationId === workspaceId ? taskLoad.tasks : [];
   const tasksError =
     taskLoad.organizationId === workspaceId ? taskLoad.error : null;
-  const currentActivities = useMemo(
-    () => activities.filter((activity) => activity.workspaceId === workspaceId),
-    [activities, workspaceId],
-  );
+  const isMembersLoading = memberLoad.organizationId !== workspaceId;
+  const memberCount = isMembersLoading ? null : memberLoad.count;
+  const canViewAudit = workspace.role === "OWNER" || workspace.role === "ADMIN";
+  const isActivityLoading = canViewAudit && activityLoad.organizationId !== workspaceId;
+  const currentActivities = activityLoad.organizationId === workspaceId
+    ? activityLoad.items
+    : [];
+  const activityError = activityLoad.organizationId === workspaceId
+    ? activityLoad.error
+    : null;
+
+  useEffect(() => {
+    if (window.location.hash === "#notifications") {
+      setIsNotificationsOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -169,6 +203,79 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
   }, [getToken, isProjectsLoading, projects, taskRetry, workspaceId]);
 
   useEffect(() => {
+    if (!workspaceId) return;
+    let active = true;
+
+    async function loadMembers() {
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Your session is unavailable. Sign in again to continue.");
+        const team = await getOrganizationTeam(token, workspaceId);
+        if (active) {
+          setMemberLoad({
+            organizationId: workspaceId,
+            count: team.members.length,
+            error: null,
+          });
+        }
+      } catch (requestError) {
+        if (active) {
+          setMemberLoad({
+            organizationId: workspaceId,
+            count: null,
+            error: requestError instanceof Error
+              ? requestError.message
+              : "We couldn’t load the member count.",
+          });
+        }
+      }
+    }
+
+    void loadMembers();
+    return () => {
+      active = false;
+    };
+  }, [getToken, workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    if (!canViewAudit) {
+      setActivityLoad({ organizationId: workspaceId, items: [], error: null });
+      return;
+    }
+    let active = true;
+
+    async function loadActivity() {
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Your session is unavailable. Sign in again to continue.");
+        const page = await listOrganizationAuditLogs(token, workspaceId, {
+          page: 1,
+          pageSize: 8,
+        });
+        if (active) {
+          setActivityLoad({ organizationId: workspaceId, items: page.items, error: null });
+        }
+      } catch (requestError) {
+        if (active) {
+          setActivityLoad({
+            organizationId: workspaceId,
+            items: [],
+            error: requestError instanceof Error
+              ? requestError.message
+              : "We couldn’t load recent activity.",
+          });
+        }
+      }
+    }
+
+    void loadActivity();
+    return () => {
+      active = false;
+    };
+  }, [activityRetry, canViewAudit, getToken, workspaceId]);
+
+  useEffect(() => {
     if (!projectNotice) return;
     const timeoutId = window.setTimeout(() => setProjectNotice(null), 3500);
     return () => window.clearTimeout(timeoutId);
@@ -180,6 +287,12 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
       throw new Error("Your session is unavailable. Sign in again to continue.");
     }
     return token;
+  }
+
+  function handleWorkspaceChange(nextWorkspaceId: string) {
+    setWorkspaceId(nextWorkspaceId);
+    setActiveSection("home");
+    router.replace(organizationDashboardPath(nextWorkspaceId));
   }
 
   async function saveProject(input: ProjectInput) {
@@ -238,84 +351,146 @@ export default function Dashboard({ workspaces }: { workspaces: Workspace[] }) {
     workspace.role === "OWNER" ||
     workspace.role === "ADMIN" ||
     workspace.role === "MANAGER";
+  const firstName = user?.firstName
+    ?? user?.fullName?.trim().split(/\s+/u)[0]
+    ?? "there";
+  const roleLabel = workspace.role.charAt(0) + workspace.role.slice(1).toLowerCase();
+  const homeHref = organizationDashboardPath(workspaceId);
   return (
     <div className="dashboard-shell" id="home">
       <DashboardSidebar
         activeSection={activeSection}
+        canViewAudit={canViewAudit}
+        homeHref={homeHref}
+        isMobileOpen={isMobileNavOpen}
+        onMobileClose={() => setIsMobileNavOpen(false)}
         onNotifications={() => setIsNotificationsOpen((open) => !open)}
         onSectionChange={setActiveSection}
-        onWorkspaceChange={setWorkspaceId}
+        onWorkspaceChange={handleWorkspaceChange}
         workspaceId={workspaceId}
         workspaces={workspaces}
       />
+      {isMobileNavOpen && (
+        <button
+          aria-label="Close navigation"
+          className="sidebar-backdrop"
+          onClick={() => setIsMobileNavOpen(false)}
+          type="button"
+        />
+      )}
       <main className="main-area">
-        <div className="dashboard-content">
-          <header className="topbar">
-            <div className="page-heading">
-              <h1>{workspace.name}</h1>
-              <p>Your organization&apos;s workspace at a glance.</p>
-            </div>
-            <div className="header-actions">
-              <label className="search-wrap">
-                <Icon name="search" width={17} height={17} />
-                <span className="sr-only">Search projects, tasks, and activity</span>
-                <input
-                  className="search-input"
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search anything..."
-                  type="search"
-                  value={search}
-                />
-              </label>
-              <NotificationCenter
-                isOpen={isNotificationsOpen}
-                onOpenChange={setIsNotificationsOpen}
-              />
-              {canCreateProject && (
-                <button
-                  className="primary-button"
-                  onClick={() => setProjectDialog("create")}
-                  type="button"
-                >
-                  <Icon name="plus" width={16} height={16} />
-                  <span>New project</span>
-                </button>
-              )}
-            </div>
-          </header>
-
-          <OverviewSection tasks={currentTasks} />
-
-          <div className="content-grid">
-            <div className="primary-column">
-              <ProjectsSection
-                canCreate={canCreateProject}
-                error={projectsError}
-                isLoading={isProjectsLoading}
-                onArchive={handleArchive}
-                onCreate={() => setProjectDialog("create")}
-                onEdit={setProjectDialog}
-                onRetry={() => setProjectRetry((value) => value + 1)}
-                organizationId={workspaceId}
-                projects={projects}
-                search={search}
-              />
-              <TasksSection
-                key={workspaceId}
-                onClearSearch={() => setSearch("")}
-                error={tasksError}
-                isLoading={isTasksLoading}
-                onRetry={() => setTaskRetry((value) => value + 1)}
-                organizationId={workspaceId}
-                projects={projects}
-                search={search}
-                tasks={currentTasks}
-              />
-            </div>
-            <div className="secondary-column">
-              <ActivitySection activities={currentActivities} search={search} />
+        <header className="app-header">
+          <button
+            aria-label="Open navigation"
+            className="mobile-menu-button"
+            onClick={() => setIsMobileNavOpen(true)}
+            type="button"
+          >
+            <Icon name="menu" width={22} height={22} />
+          </button>
+          <label className="search-wrap">
+            <Icon name="search" width={18} height={18} />
+            <span className="sr-only">Search projects and tasks</span>
+            <input
+              className="search-input"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search projects or tasks…"
+              type="search"
+              value={search}
+            />
+            <kbd>Ctrl K</kbd>
+          </label>
+          <div className="header-actions">
+            <NotificationCenter
+              isOpen={isNotificationsOpen}
+              onOpenChange={setIsNotificationsOpen}
+            />
+            <div className="header-profile">
+              <UserButton />
+              <span>
+                <strong>{user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? "NEXUS member"}</strong>
+                <small>{roleLabel}</small>
+              </span>
             </div>
           </div>
+        </header>
+        <div className="dashboard-content">
+          <section className="welcome-row" aria-labelledby="welcome-title">
+            <div className="welcome-copy">
+              <span className="welcome-mark" aria-hidden="true">
+                <Icon name="spark" width={27} height={27} />
+              </span>
+              <div>
+                <p className="welcome-eyebrow">{workspace.name} · {roleLabel}</p>
+                <h1 id="welcome-title">Welcome back, {firstName}!</h1>
+                <p>Here&apos;s what&apos;s happening in your workspace today.</p>
+              </div>
+            </div>
+            {canCreateProject && (
+              <button
+                className="button button-primary welcome-action"
+                onClick={() => setProjectDialog("create")}
+                type="button"
+              >
+                <Icon name="plus" width={17} height={17} />
+                New project
+              </button>
+            )}
+          </section>
+
+          <OverviewSection
+            isMembersLoading={isMembersLoading}
+            isProjectsLoading={isProjectsLoading}
+            isTasksLoading={isTasksLoading}
+            memberCount={memberCount}
+            projects={projects}
+            tasks={currentTasks}
+          />
+
+          <div className="content-grid">
+            <ProjectsSection
+              canCreate={canCreateProject}
+              error={projectsError}
+              isLoading={isProjectsLoading}
+              onArchive={handleArchive}
+              onCreate={() => setProjectDialog("create")}
+              onEdit={setProjectDialog}
+              onRetry={() => setProjectRetry((value) => value + 1)}
+              organizationId={workspaceId}
+              projects={projects}
+              search={search}
+              tasks={currentTasks}
+            />
+            <ActivitySection
+              activities={currentActivities}
+              canView={canViewAudit}
+              error={activityError}
+              isLoading={isActivityLoading}
+              onRetry={() => setActivityRetry((value) => value + 1)}
+              organizationId={workspaceId}
+            />
+          </div>
+          <div className="dashboard-lower-grid">
+            <TaskOverviewSection tasks={currentTasks} />
+            <QuickActionsSection
+              canCreateProject={canCreateProject}
+              canViewAudit={canViewAudit}
+              onCreateProject={() => setProjectDialog("create")}
+              onNotifications={() => setIsNotificationsOpen(true)}
+              organizationId={workspaceId}
+            />
+          </div>
+          <TasksSection
+            key={workspaceId}
+            onClearSearch={() => setSearch("")}
+            error={tasksError}
+            isLoading={isTasksLoading}
+            onRetry={() => setTaskRetry((value) => value + 1)}
+            organizationId={workspaceId}
+            projects={projects}
+            search={search}
+            tasks={currentTasks}
+          />
           <p className="workspace-footnote">{workspace.name} · Organization workspace</p>
         </div>
       </main>

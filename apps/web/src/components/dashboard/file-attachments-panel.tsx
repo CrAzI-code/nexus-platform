@@ -357,7 +357,9 @@ export function FileAttachmentsPanel({
                   <strong title={file.originalName}>{file.originalName}</strong>
                   <span>
                     {formatFileType(file.mimeType)} ·{" "}
-                    {formatFileSize(file.sizeBytes)} · {file.uploaderName} ·{" "}
+                    {formatFileSize(file.sizeBytes)} ·{" "}
+                    {file.scanStatus === "CLEAN" ? "Scanned" : "Not scanned"} ·{" "}
+                    {file.uploaderName} ·{" "}
                     {formatFileDate(file.uploadedAt)}
                   </span>
                 </div>

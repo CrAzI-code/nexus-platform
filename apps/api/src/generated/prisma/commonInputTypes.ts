@@ -353,6 +353,13 @@ export type IntFilter<$PrismaModel = never> = {
   not?: Prisma.NestedIntFilter<$PrismaModel> | number
 }
 
+export type EnumFileScanStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.FileScanStatus | Prisma.EnumFileScanStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFileScanStatusFilter<$PrismaModel> | $Enums.FileScanStatus
+}
+
 export type IntWithAggregatesFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -367,6 +374,16 @@ export type IntWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedIntFilter<$PrismaModel>
   _max?: Prisma.NestedIntFilter<$PrismaModel>
+}
+
+export type EnumFileScanStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.FileScanStatus | Prisma.EnumFileScanStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFileScanStatusWithAggregatesFilter<$PrismaModel> | $Enums.FileScanStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumFileScanStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumFileScanStatusFilter<$PrismaModel>
 }
 
 export type EnumInvitationRoleFilter<$PrismaModel = never> = {
@@ -859,6 +876,13 @@ export type NestedEnumTaskActivityTypeWithAggregatesFilter<$PrismaModel = never>
   _max?: Prisma.NestedEnumTaskActivityTypeFilter<$PrismaModel>
 }
 
+export type NestedEnumFileScanStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.FileScanStatus | Prisma.EnumFileScanStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFileScanStatusFilter<$PrismaModel> | $Enums.FileScanStatus
+}
+
 export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -884,6 +908,16 @@ export type NestedFloatFilter<$PrismaModel = never> = {
   gt?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   gte?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   not?: Prisma.NestedFloatFilter<$PrismaModel> | number
+}
+
+export type NestedEnumFileScanStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.FileScanStatus | Prisma.EnumFileScanStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.FileScanStatus[] | Prisma.ListEnumFileScanStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumFileScanStatusWithAggregatesFilter<$PrismaModel> | $Enums.FileScanStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumFileScanStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumFileScanStatusFilter<$PrismaModel>
 }
 
 export type NestedEnumInvitationRoleFilter<$PrismaModel = never> = {

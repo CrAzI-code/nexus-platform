@@ -62,6 +62,11 @@ enum TaskPriority {
   URGENT
 }
 
+enum FileScanStatus {
+  CLEAN
+  UNSCANNED
+}
+
 enum TaskActivityType {
   CREATED
   UPDATED
@@ -135,10 +140,10 @@ model User {
   createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  identities   AuthIdentity[]
-  memberships  OrganizationMembership[]
+  identities    AuthIdentity[]
+  memberships   OrganizationMembership[]
   notifications Notification[]
-  auditLogs    AuditLog[]
+  auditLogs     AuditLog[]
 
   @@map("users")
 }
@@ -165,11 +170,11 @@ model Organization {
   createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz
 
-  memberships OrganizationMembership[]
-  projects    Project[]
-  invitations Invitation[]
+  memberships   OrganizationMembership[]
+  projects      Project[]
+  invitations   Invitation[]
   notifications Notification[]
-  auditLogs   AuditLog[]
+  auditLogs     AuditLog[]
 
   @@map("organizations")
 }
@@ -187,7 +192,7 @@ model OrganizationMembership {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   projectMemberships ProjectMember[]
-  sentInvitations    Invitation[]    @relation("InvitationInviterMembership")
+  sentInvitations    Invitation[]     @relation("InvitationInviterMembership")
   uploadedFiles      FileAttachment[] @relation("FileUploaderMembership")
 
   @@unique([organizationId, userId])
@@ -207,10 +212,10 @@ model Project {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
-  members ProjectMember[]
-  tasks   Task[]
+  members       ProjectMember[]
+  tasks         Task[]
   notifications Notification[]
-  files   FileAttachment[]
+  files         FileAttachment[]
 
   @@unique([organizationId, id])
   @@index([organizationId, status])
@@ -258,9 +263,9 @@ model Task {
 
   creator ProjectMember @relation("TaskCreator", fields: [organizationId, projectId, creatorId], references: [organizationId, projectId, userId], onDelete: Restrict)
 
-  assignee   ProjectMember? @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
-  comments   TaskComment[]
-  activities TaskActivity[]
+  assignee        ProjectMember?       @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
+  comments        TaskComment[]
+  activities      TaskActivity[]
   fileAttachments TaskFileAttachment[]
 
   @@unique([organizationId, projectId, id])
@@ -305,18 +310,19 @@ model TaskActivity {
 }
 
 model FileAttachment {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @map("organization_id") @db.Uuid
-  projectId      String    @map("project_id") @db.Uuid
-  uploadedById   String    @map("uploaded_by_id") @db.Uuid
-  storageKey     String    @unique @map("storage_key") @db.VarChar(36)
-  originalName   String    @map("original_name") @db.VarChar(255)
-  mimeType       String    @map("mime_type") @db.VarChar(100)
-  sizeBytes      Int       @map("size_bytes")
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  removedAt      DateTime? @map("removed_at") @db.Timestamptz
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  projectId      String         @map("project_id") @db.Uuid
+  uploadedById   String         @map("uploaded_by_id") @db.Uuid
+  storageKey     String         @unique @map("storage_key") @db.VarChar(36)
+  originalName   String         @map("original_name") @db.VarChar(255)
+  mimeType       String         @map("mime_type") @db.VarChar(100)
+  sizeBytes      Int            @map("size_bytes")
+  scanStatus     FileScanStatus @default(UNSCANNED) @map("scan_status")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  removedAt      DateTime?      @map("removed_at") @db.Timestamptz
 
-  project            Project                 @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  project            Project                @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
   uploaderMembership OrganizationMembership @relation("FileUploaderMembership", fields: [organizationId, uploadedById], references: [organizationId, userId], onDelete: Restrict)
   taskAttachment     TaskFileAttachment?
 
@@ -373,9 +379,9 @@ model Notification {
   readAt         DateTime?                @map("read_at") @db.Timestamptz
   createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz
 
-  recipient   User         @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  recipient    User         @relation(fields: [recipientId], references: [id], onDelete: Restrict)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  project     Project?      @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  project      Project?     @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
 
   @@unique([recipientId, eventKey])
   @@index([recipientId, createdAt, id])

@@ -4,31 +4,15 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Dashboard from "@/components/dashboard/dashboard";
-import type { Workspace } from "@/components/dashboard/dashboard-data";
-import {
-  listOrganizations,
-  type OrganizationMembership,
-} from "@/lib/organizations";
+import { toWorkspace, type Workspace } from "@/components/dashboard/dashboard-data";
+import { listOrganizations } from "@/lib/organizations";
+import { organizationDashboardPath } from "@/lib/routes";
 
-function toWorkspace(organization: OrganizationMembership): Workspace {
-  const initials = organization.name
-    .trim()
-    .split(/\s+/u)
-    .slice(0, 2)
-    .map((part) => part[0] ?? "")
-    .join("")
-    .toUpperCase();
-
-  return {
-    id: organization.id,
-    name: organization.name,
-    plan: `${organization.role.toLowerCase()} workspace`,
-    initials: initials || "NX",
-    role: organization.role,
-  };
-}
-
-export default function OrganizationGate() {
+export default function OrganizationGate({
+  initialOrganizationId,
+}: {
+  initialOrganizationId?: string;
+}) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
@@ -54,6 +38,12 @@ export default function OrganizationGate() {
           router.replace("/onboarding");
           return;
         }
+        if (
+          initialOrganizationId &&
+          !organizations.some((organization) => organization.id === initialOrganizationId)
+        ) {
+          router.replace(organizationDashboardPath(organizations[0].id));
+        }
         setWorkspaces(organizations.map(toWorkspace));
       } catch (requestError) {
         if (active) {
@@ -70,7 +60,7 @@ export default function OrganizationGate() {
     return () => {
       active = false;
     };
-  }, [getToken, isLoaded, isSignedIn, retry, router]);
+  }, [getToken, initialOrganizationId, isLoaded, isSignedIn, retry, router]);
 
   if (error) {
     return (
@@ -103,5 +93,11 @@ export default function OrganizationGate() {
     );
   }
 
-  return <Dashboard workspaces={workspaces} />;
+  return (
+    <Dashboard
+      initialWorkspaceId={initialOrganizationId}
+      key={initialOrganizationId ?? workspaces[0].id}
+      workspaces={workspaces}
+    />
+  );
 }

@@ -32,9 +32,9 @@ describe('BrevoEmailService', () => {
   it('sends a branded transactional email using Brevo REST API', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 201 }));
 
-    await expect(
-      service.sendOrganizationInvitation(invitation),
-    ).resolves.toBe('sent');
+    await expect(service.sendOrganizationInvitation(invitation)).resolves.toBe(
+      'sent',
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.brevo.com/v3/smtp/email',
@@ -53,6 +53,7 @@ describe('BrevoEmailService', () => {
     }
     const body = JSON.parse(request.body) as {
       to: Array<{ email: string }>;
+      sender: { email: string; name: string };
       htmlContent: string;
       textContent: string;
     };
@@ -71,11 +72,13 @@ describe('BrevoEmailService', () => {
 
   it('reports missing configuration without calling Brevo', async () => {
     vi.stubEnv('BREVO_API_KEY', '');
-    const warning = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const warning = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
 
-    await expect(
-      service.sendOrganizationInvitation(invitation),
-    ).resolves.toBe('unavailable');
+    await expect(service.sendOrganizationInvitation(invitation)).resolves.toBe(
+      'unavailable',
+    );
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(warning).toHaveBeenCalled();
@@ -100,11 +103,13 @@ describe('BrevoEmailService', () => {
         { status: 400, headers: { 'content-type': 'application/json' } },
       ),
     );
-    const warning = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const warning = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
 
-    await expect(
-      service.sendOrganizationInvitation(invitation),
-    ).resolves.toBe('failed');
+    await expect(service.sendOrganizationInvitation(invitation)).resolves.toBe(
+      'failed',
+    );
 
     const loggedMessage = warning.mock.calls[0]?.[0] ?? '';
     expect(loggedMessage).toContain('"providerStatus":400');
@@ -113,12 +118,8 @@ describe('BrevoEmailService', () => {
     expect(loggedMessage).toContain('[redacted-email]');
     expect(loggedMessage).toContain('[redacted-token]');
     expect(loggedMessage).toContain('[redacted-url]');
-    expect(loggedMessage).not.toContain(
-      invitation.recipientEmail,
-    );
-    expect(loggedMessage).not.toContain(
-      invitation.invitationToken,
-    );
+    expect(loggedMessage).not.toContain(invitation.recipientEmail);
+    expect(loggedMessage).not.toContain(invitation.invitationToken);
     expect(loggedMessage).not.toContain('secret');
   });
 
@@ -129,11 +130,13 @@ describe('BrevoEmailService', () => {
         { status: 401, headers: { 'content-type': 'application/json' } },
       ),
     );
-    const warning = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const warning = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
 
-    await expect(
-      service.sendOrganizationInvitation(invitation),
-    ).resolves.toBe('failed');
+    await expect(service.sendOrganizationInvitation(invitation)).resolves.toBe(
+      'failed',
+    );
 
     const loggedMessage = warning.mock.calls[0]?.[0] ?? '';
     expect(loggedMessage).toContain('"providerStatus":401');
@@ -144,8 +147,8 @@ describe('BrevoEmailService', () => {
   it('reports network failures without throwing', async () => {
     fetchMock.mockRejectedValue(new Error('network failure'));
 
-    await expect(
-      service.sendOrganizationInvitation(invitation),
-    ).resolves.toBe('failed');
+    await expect(service.sendOrganizationInvitation(invitation)).resolves.toBe(
+      'failed',
+    );
   });
 });

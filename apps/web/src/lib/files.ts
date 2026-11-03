@@ -5,6 +5,7 @@ export type FileAttachment = {
   originalName: string;
   mimeType: string;
   sizeBytes: number;
+  scanStatus: "CLEAN" | "UNSCANNED";
   uploadedAt: string;
   uploaderName: string;
   canPreview: boolean;
@@ -49,6 +50,7 @@ function isFileAttachment(value: unknown): value is FileAttachment {
     typeof value.sizeBytes === "number" &&
     Number.isSafeInteger(value.sizeBytes) &&
     value.sizeBytes > 0 &&
+    (value.scanStatus === "CLEAN" || value.scanStatus === "UNSCANNED") &&
     typeof value.uploadedAt === "string" &&
     typeof value.uploaderName === "string" &&
     typeof value.canPreview === "boolean" &&
@@ -79,6 +81,9 @@ function errorMessage(status: number): string {
   if (status === 404) return "This file or project is no longer available.";
   if (status === 409) return "The project or task can no longer accept file changes.";
   if (status === 413) return "This file is larger than the upload limit.";
+  if (status === 503) {
+    return "File storage or security scanning is temporarily unavailable.";
+  }
   return "We couldn’t complete the file request. Please try again.";
 }
 

@@ -35,9 +35,11 @@ describe('ClerkBackendService', () => {
       sub: 'user_123',
       sid: 'sess_123',
       sts: 'active',
-    });
+    } as never);
 
-    await expect(service.verifySessionToken('valid-session-token')).resolves.toEqual({
+    await expect(
+      service.verifySessionToken('valid-session-token'),
+    ).resolves.toEqual({
       subject: 'user_123',
     });
     expect(verifyToken).toHaveBeenCalledWith('valid-session-token', {
@@ -60,7 +62,9 @@ describe('ClerkBackendService', () => {
   });
 
   it('logs an authorized-party mismatch category without logging verifier details', async () => {
-    const logger = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const logger = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
     vi.mocked(verifyToken).mockRejectedValue(
       new TokenVerificationError({
         message: 'Sensitive token and origin details',
@@ -80,7 +84,9 @@ describe('ClerkBackendService', () => {
   });
 
   it('reports an invalid backend secret as a configuration failure', async () => {
-    const logger = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    const logger = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => {});
     vi.mocked(verifyToken).mockRejectedValue(
       new TokenVerificationError({
         message: 'Sensitive secret key details',
@@ -102,11 +108,11 @@ describe('ClerkBackendService', () => {
   });
 
   it('rejects tokens that do not contain Clerk session claims', async () => {
-    vi.mocked(verifyToken).mockResolvedValue({ sub: 'user_123' });
+    vi.mocked(verifyToken).mockResolvedValue({ sub: 'user_123' } as never);
 
-    await expect(service.verifySessionToken('not-a-session-token')).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      service.verifySessionToken('not-a-session-token'),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('fails closed when the authorized-party allowlist is missing', async () => {

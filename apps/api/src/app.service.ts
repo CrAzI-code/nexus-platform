@@ -12,11 +12,10 @@ export class AppService {
   async getDatabaseHealth(): Promise<{
     status: 'ok';
     database: 'connected';
-    users: number;
   }> {
     try {
-      const users = await this.prisma.user.count();
-      return { status: 'ok', database: 'connected', users };
+      await this.prisma.user.count();
+      return { status: 'ok', database: 'connected' };
     } catch {
       throw new ServiceUnavailableException('Database health check failed');
     }

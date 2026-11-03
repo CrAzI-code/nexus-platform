@@ -1,5 +1,30 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## NEXUS frontend architecture
+
+The authenticated workspace uses the existing NestJS API clients in `src/lib` and
+Clerk for session tokens. Shared NEXUS color and surface tokens live in
+`src/app/globals.css`; responsive dashboard-shell styles live in
+`src/app/dashboard.css`; reusable loading, empty, error, and status UI lives in
+`src/components/ui`.
+
+Dashboard counts are derived from the existing organization, project, task, and team
+APIs. Recent organization activity uses the audit-log API and is shown only to roles
+already authorized by the backend. Navigation must link only to real routes; Files and
+Settings remain visibly unavailable until dedicated routes exist.
+
+Authenticated organization pages share the persistent organization shell. Home links
+use `/?organizationId=<id>` so dashboard navigation is direct and keeps organization
+context without relying on browser history.
+
+Run frontend checks from the repository root:
+
+```bash
+npm run lint --workspace=web
+npm exec --workspace=web tsc -- --noEmit
+npm run build --workspace=web
+```
+
 ## Getting Started
 
 First, run the development server:

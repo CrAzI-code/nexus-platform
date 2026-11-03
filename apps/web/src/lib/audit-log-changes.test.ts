@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatAuditFieldValue,
+  getAuditResourceName,
   getAuditFieldChanges,
 } from "./audit-log-changes";
 
@@ -41,9 +42,9 @@ describe("getAuditFieldChanges", () => {
   });
 
   it("returns no rows for identical snapshots", () => {
-    expect(getAuditFieldChanges({ priority: "HIGH" }, { priority: "HIGH" })).toEqual(
-      [],
-    );
+    expect(
+      getAuditFieldChanges({ priority: "HIGH" }, { priority: "HIGH" }),
+    ).toEqual([]);
     expect(
       getAuditFieldChanges(
         { preferences: { alerts: ["email", "push"] } },
@@ -75,5 +76,26 @@ describe("getAuditFieldChanges", () => {
     }
     expect(() => getAuditFieldChanges(deeplyNested, null)).not.toThrow();
     expect(formatAuditFieldValue(deeplyNested)).toMatch(/Complex value$/);
+  });
+
+  it("does not expose internal identifiers or sensitive fields", () => {
+    expect(
+      getAuditFieldChanges(
+        { projectId: "ca4f89d3-1ca5-4d14-a2f2-1089d7afeb20", token: "old" },
+        { projectId: "dde30ed6-c027-4b88-92f6-9d32d829a4b1", token: "new" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("finds a readable resource name in current or previous snapshots", () => {
+    expect(
+      getAuditResourceName(
+        { project: { title: "Website refresh" } },
+        { project: { title: "Website launch" } },
+      ),
+    ).toBe("Website launch");
+    expect(getAuditResourceName({ fileName: "brief.pdf" }, null)).toBe(
+      "brief.pdf",
+    );
   });
 });
