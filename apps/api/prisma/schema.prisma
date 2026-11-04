@@ -377,7 +377,7 @@ model Notification {
   resourceId     String                   @map("resource_id") @db.Uuid
   eventKey       String                   @map("event_key") @db.VarChar(160)
   readAt         DateTime?                @map("read_at") @db.Timestamptz
-  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
 
   recipient    User         @relation(fields: [recipientId], references: [id], onDelete: Restrict)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
