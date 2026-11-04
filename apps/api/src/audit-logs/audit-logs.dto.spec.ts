@@ -21,6 +21,13 @@ describe('AuditLogListPipe', () => {
     });
   });
 
+  it.each(['INVITATION_RESENT', 'INVITATION_DECLINED'] as const)(
+    'allows filtering invitation lifecycle action %s',
+    (action) => {
+      expect(pipe.transform({ action })).toMatchObject({ action });
+    },
+  );
+
   it.each([
     { action: 'UNKNOWN' },
     { actorId: 'not-a-uuid' },

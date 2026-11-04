@@ -113,6 +113,11 @@ export interface AcceptedInvitationResponse {
   role: OrganizationRole;
 }
 
+export interface DeclinedInvitationResponse {
+  organizationId: string;
+  status: 'DECLINED';
+}
+
 @Injectable()
 export class OrganizationTeamService {
   private readonly logger = new Logger(OrganizationTeamService.name);
@@ -338,6 +343,79 @@ export class OrganizationTeamService {
         after: { status: 'REVOKED' },
       });
       return this.toInvitationResponse(invitation, 'REVOKED');
+    });
+  }
+
+  async resendInvitation(
+    organizationId: string,
+    invitationId: string,
+    userId: string,
+  ): Promise<CreatedInvitation> {
+    return this.withSerializableRetry(async (transaction) => {
+      const access = await this.findAccess(transaction, organizationId, userId);
+      this.assertCanManage(access.role);
+      const invitation = await transaction.invitation.findFirst({
+        where: { id: invitationId, organizationId },
+        select: { ...invitationSelect, status: true },
+      });
+      if (!invitation) throw new NotFoundException('Invitation not found.');
+      if (invitation.status !== 'PENDING') {
+        throw new ConflictException('Only pending invitations can be resent.');
+      }
+
+      const now = new Date();
+      if (invitation.expiresAt <= now) {
+        throw new ConflictException('This invitation has expired.');
+      }
+      const invitationToken = randomBytes(32).toString('hex');
+      const expiresAt = new Date(now);
+      expiresAt.setUTCDate(expiresAt.getUTCDate() + INVITATION_LIFETIME_DAYS);
+      const updated = await transaction.invitation.updateMany({
+        where: {
+          id: invitation.id,
+          organizationId,
+          status: 'PENDING',
+          expiresAt: { gt: now },
+        },
+        data: {
+          tokenHash: this.hashToken(invitationToken),
+          expiresAt,
+        },
+      });
+      if (updated.count !== 1) {
+        throw new ConflictException(
+          'This invitation is no longer available to resend.',
+        );
+      }
+
+      const organization = await transaction.organization.findFirst({
+        where: { id: organizationId, status: 'ACTIVE' },
+        select: { name: true },
+      });
+      if (!organization) {
+        throw new NotFoundException('Organization not found.');
+      }
+      const refreshedInvitation = await transaction.invitation.findFirst({
+        where: { id: invitation.id, organizationId },
+        select: invitationSelect,
+      });
+      if (!refreshedInvitation) {
+        throw new NotFoundException('Invitation not found.');
+      }
+      await AuditLogsService.record(transaction, {
+        organizationId,
+        actorId: userId,
+        action: 'INVITATION_RESENT',
+        targetType: 'INVITATION',
+        targetId: invitation.id,
+        before: { status: 'PENDING', expiresAt: invitation.expiresAt },
+        after: { status: 'PENDING', expiresAt },
+      });
+      return {
+        invitation: this.toInvitationResponse(refreshedInvitation),
+        invitationToken,
+        organizationName: organization.name,
+      };
     });
   }
 
@@ -599,6 +677,90 @@ export class OrganizationTeamService {
     });
   }
 
+  async declineInvitation(
+    invitationToken: string,
+    userId: string,
+    userEmail: string,
+    userEmailVerified: boolean,
+  ): Promise<DeclinedInvitationResponse> {
+    return this.withSerializableRetry((transaction) =>
+      this.completeInvitationDecline(
+        transaction,
+        transaction.invitation.findUnique({
+          where: { tokenHash: this.hashToken(invitationToken) },
+          select: acceptanceInvitationSelect,
+        }),
+        userId,
+        userEmail,
+        userEmailVerified,
+      ),
+    );
+  }
+
+  async declineInvitationById(
+    invitationId: string,
+    userId: string,
+    userEmail: string,
+    userEmailVerified: boolean,
+  ): Promise<DeclinedInvitationResponse> {
+    return this.withSerializableRetry((transaction) =>
+      this.completeInvitationDecline(
+        transaction,
+        transaction.invitation.findUnique({
+          where: { id: invitationId },
+          select: acceptanceInvitationSelect,
+        }),
+        userId,
+        userEmail,
+        userEmailVerified,
+      ),
+    );
+  }
+
+  private async completeInvitationDecline(
+    transaction: Transaction,
+    invitationPromise: Promise<AcceptanceInvitation | null>,
+    userId: string,
+    userEmail: string,
+    userEmailVerified: boolean,
+  ): Promise<DeclinedInvitationResponse> {
+    const invitation = await invitationPromise;
+    if (!invitation) throw new NotFoundException('Invitation not found.');
+    if (!userEmailVerified) {
+      throw new ForbiddenException(
+        'Verify the email address on your NEXUS account before declining an invitation.',
+      );
+    }
+    if (this.normalizeEmail(userEmail) !== invitation.email.toLowerCase()) {
+      throw new ForbiddenException(
+        'Sign in with the email address this invitation was sent to.',
+      );
+    }
+    this.assertInvitationAvailable(invitation);
+
+    const declined = await transaction.invitation.updateMany({
+      where: {
+        id: invitation.id,
+        status: 'PENDING',
+        expiresAt: { gt: new Date() },
+      },
+      data: { status: 'DECLINED' },
+    });
+    if (declined.count !== 1) {
+      throw new ConflictException('This invitation is no longer available.');
+    }
+    await AuditLogsService.record(transaction, {
+      organizationId: invitation.organizationId,
+      actorId: userId,
+      action: 'INVITATION_DECLINED',
+      targetType: 'INVITATION',
+      targetId: invitation.id,
+      before: { status: 'PENDING' },
+      after: { status: 'DECLINED' },
+    });
+    return { organizationId: invitation.organizationId, status: 'DECLINED' };
+  }
+
   private async completeInvitationAcceptance(
     transaction: Transaction,
     invitation: AcceptanceInvitation,
@@ -607,7 +769,6 @@ export class OrganizationTeamService {
     userEmailVerified: boolean,
     setStage: (stage: string) => void,
   ): Promise<AcceptedInvitationResponse> {
-    this.assertInvitationAvailable(invitation);
     if (!userEmailVerified) {
       throw new ForbiddenException(
         'Verify the email address on your NEXUS account before accepting an invitation.',
@@ -618,6 +779,7 @@ export class OrganizationTeamService {
         'Sign in with the email address this invitation was sent to.',
       );
     }
+    this.assertInvitationAvailable(invitation);
 
     setStage('membership_check');
     const existingMembership =
@@ -717,6 +879,9 @@ export class OrganizationTeamService {
     }
     if (invitation.status === 'ACCEPTED') {
       throw new ConflictException('This invitation has already been used.');
+    }
+    if (invitation.status === 'DECLINED') {
+      throw new ConflictException('This invitation has already been declined.');
     }
     if (
       invitation.status === 'EXPIRED' ||

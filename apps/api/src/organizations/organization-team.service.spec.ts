@@ -278,6 +278,77 @@ describe('OrganizationTeamService', () => {
     expect(transaction.invitation.create).not.toHaveBeenCalled();
   });
 
+  it('resends a pending invitation with a new token hash and expiration', async () => {
+    const expiresAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    transaction.invitation.findFirst.mockResolvedValue({
+      ...pendingInvitation,
+      expiresAt,
+      status: 'PENDING',
+    });
+    transaction.invitation.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.resendInvitation(
+      'organization-id',
+      'invitation-id',
+      'owner-id',
+    );
+
+    expect(result.invitationToken).toMatch(/^[a-f0-9]{64}$/u);
+    expect(result.invitationToken).not.toBe(result.invitation.id);
+    const update = transaction.invitation.updateMany.mock.calls[0]?.[0];
+    expect(update.data.tokenHash).toMatch(/^[a-f0-9]{64}$/u);
+    expect(update.data.tokenHash).not.toBe(result.invitationToken);
+    expect(update.data.expiresAt.getTime()).toBeGreaterThan(expiresAt.getTime());
+    expect(update.where).toMatchObject({
+      id: 'invitation-id',
+      organizationId: 'organization-id',
+      status: 'PENDING',
+    });
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'INVITATION_RESENT',
+          targetId: 'invitation-id',
+          after: expect.objectContaining({ status: 'PENDING' }),
+        }),
+      }),
+    );
+    expect(JSON.stringify(transaction.auditLog.create.mock.calls)).not.toContain(
+      result.invitationToken,
+    );
+  });
+
+  it('denies resending to non-admin members and rejects expired or non-pending invitations', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'MEMBER',
+    });
+    await expect(
+      service.resendInvitation(
+        'organization-id',
+        'invitation-id',
+        'member-id',
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(transaction.invitation.updateMany).not.toHaveBeenCalled();
+
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'OWNER',
+    });
+    transaction.invitation.findFirst.mockResolvedValueOnce({
+      ...pendingInvitation,
+      status: 'PENDING',
+      expiresAt: new Date(0),
+    });
+    await expect(
+      service.resendInvitation(
+        'organization-id',
+        'invitation-id',
+        'owner-id',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(transaction.invitation.updateMany).not.toHaveBeenCalled();
+  });
+
   it('accepts a valid invitation for the matching authenticated email exactly once', async () => {
     transaction.invitation.updateMany.mockResolvedValue({ count: 1 });
     await expect(
@@ -407,6 +478,91 @@ describe('OrganizationTeamService', () => {
     expect(transaction.invitation.updateMany).not.toHaveBeenCalled();
     expect(transaction.organizationMembership.upsert).not.toHaveBeenCalled();
   });
+
+  it('declines a pending invitation once for the verified matching email', async () => {
+    transaction.invitation.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.declineInvitation(
+        'a'.repeat(64),
+        'verified-user-id',
+        'NEW.MEMBER@example.com',
+        true,
+      ),
+    ).resolves.toEqual({
+      organizationId: 'organization-id',
+      status: 'DECLINED',
+    });
+    expect(transaction.invitation.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'invitation-id',
+          status: 'PENDING',
+        }),
+        data: { status: 'DECLINED' },
+      }),
+    );
+    expect(transaction.organizationMembership.upsert).not.toHaveBeenCalled();
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          actorId: 'verified-user-id',
+          action: 'INVITATION_DECLINED',
+          targetId: 'invitation-id',
+          before: { status: 'PENDING' },
+          after: { status: 'DECLINED' },
+        }),
+      }),
+    );
+  });
+
+  it('requires verified matching email before revealing invitation status or changing it', async () => {
+    transaction.invitation.findUnique.mockResolvedValue({
+      ...pendingInvitation,
+      organizationId: 'organization-id',
+      status: 'DECLINED',
+      organization: { name: 'Acme Studio', status: 'ACTIVE' },
+    });
+    await expect(
+      service.declineInvitationById(
+        'invitation-id',
+        'unverified-user-id',
+        'new.member@example.com',
+        false,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.declineInvitationById(
+        'invitation-id',
+        'other-user-id',
+        'other@example.com',
+        true,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(transaction.invitation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['REVOKED', 'ACCEPTED', 'DECLINED'])(
+    'does not decline an invitation with status %s',
+    async (status) => {
+      transaction.invitation.findUnique.mockResolvedValue({
+        ...pendingInvitation,
+        organizationId: 'organization-id',
+        status,
+        organization: { name: 'Acme Studio', status: 'ACTIVE' },
+      });
+
+      await expect(
+        service.declineInvitationById(
+          'invitation-id',
+          'verified-user-id',
+          'new.member@example.com',
+          true,
+        ),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(transaction.invitation.updateMany).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     {

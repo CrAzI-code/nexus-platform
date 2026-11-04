@@ -80,6 +80,8 @@ const activityLabels: Record<AuditLogAction, string> = {
   INVITATION_CREATED: "invited a teammate",
   INVITATION_REVOKED: "revoked an invitation",
   INVITATION_ACCEPTED: "accepted an invitation",
+  INVITATION_RESENT: "resent an invitation",
+  INVITATION_DECLINED: "declined an invitation",
   PROJECT_CREATED: "created a project",
   PROJECT_UPDATED: "updated a project",
   PROJECT_ARCHIVED: "archived a project",

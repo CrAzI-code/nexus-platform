@@ -7,6 +7,7 @@ import {
   getOrganizationTeam,
   inviteOrganizationMember,
   removeOrganizationMember,
+  resendOrganizationInvitation,
   revokeOrganizationInvitation,
   updateOrganizationMemberRole,
   type ManagedMemberRole,
@@ -44,6 +45,9 @@ export default function TeamManagement({
   const [isInviting, setIsInviting] = useState(false);
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null);
   const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null);
+  const [busyInvitationAction, setBusyInvitationAction] = useState<
+    "resend" | "revoke" | null
+  >(null);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
@@ -141,8 +145,12 @@ export default function TeamManagement({
 
   async function changeMemberRole(
     userId: string,
+    name: string,
     nextRole: ManagedMemberRole,
   ) {
+    if (!window.confirm(`Change ${name}’s organization role to ${nextRole}?`)) {
+      return;
+    }
     setError(null);
     setNotice(null);
     setBusyMemberId(userId);
@@ -193,6 +201,7 @@ export default function TeamManagement({
     setError(null);
     setNotice(null);
     setBusyInvitationId(invitationId);
+    setBusyInvitationAction("revoke");
     try {
       const token = await getSessionToken();
       await revokeOrganizationInvitation(token, organizationId, invitationId);
@@ -206,6 +215,50 @@ export default function TeamManagement({
       );
     } finally {
       setBusyInvitationId(null);
+      setBusyInvitationAction(null);
+    }
+  }
+
+  async function resendInvitation(invitationId: string, inviteeEmail: string) {
+    if (
+      !window.confirm(
+        `Resend the invitation to ${inviteeEmail}? The previous invitation link will stop working.`,
+      )
+    ) {
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setShareLink(null);
+    setBusyInvitationId(invitationId);
+    setBusyInvitationAction("resend");
+    try {
+      const token = await getSessionToken();
+      const resent = await resendOrganizationInvitation(
+        token,
+        organizationId,
+        invitationId,
+      );
+      setShareLink(
+        `${window.location.origin}/invitations/accept#token=${resent.invitationToken}`,
+      );
+      setTeam(await getOrganizationTeam(token, organizationId));
+      const deliveryMessage =
+        resent.emailDeliveryStatus === "sent"
+          ? "A new invitation email was sent."
+          : resent.emailDeliveryStatus === "unavailable"
+            ? "Email delivery is not configured; copy the new link to share it."
+            : "The new invitation email could not be sent; copy the link to share it.";
+      setNotice(`Invitation resent to ${resent.invitation.email}. ${deliveryMessage}`);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "We couldn’t resend this invitation.",
+      );
+    } finally {
+      setBusyInvitationId(null);
+      setBusyInvitationAction(null);
     }
   }
 
@@ -352,14 +405,34 @@ export default function TeamManagement({
                           <span>{invitation.role} · Expires {formatDate(invitation.expiresAt)}</span>
                         </div>
                       </div>
-                      <button
-                        className="text-button team-remove"
-                        disabled={busyInvitationId === invitation.id}
-                        onClick={() => void revokeInvitation(invitation.id, invitation.email)}
-                        type="button"
-                      >
-                        {busyInvitationId === invitation.id ? "Revoking…" : "Revoke"}
-                      </button>
+                      <div className="team-member-actions">
+                        <button
+                          className="text-button"
+                          disabled={busyInvitationId !== null}
+                          onClick={() =>
+                            void resendInvitation(invitation.id, invitation.email)
+                          }
+                          type="button"
+                        >
+                          {busyInvitationId === invitation.id &&
+                          busyInvitationAction === "resend"
+                            ? "Resending…"
+                            : "Resend"}
+                        </button>
+                        <button
+                          className="text-button team-remove"
+                          disabled={busyInvitationId !== null}
+                          onClick={() =>
+                            void revokeInvitation(invitation.id, invitation.email)
+                          }
+                          type="button"
+                        >
+                          {busyInvitationId === invitation.id &&
+                          busyInvitationAction === "revoke"
+                            ? "Revoking…"
+                            : "Revoke"}
+                        </button>
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -411,6 +484,7 @@ export default function TeamManagement({
                               if (isManagedMemberRole(event.target.value)) {
                                 void changeMemberRole(
                                   member.userId,
+                                  member.name,
                                   event.target.value,
                                 );
                               }
