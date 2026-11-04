@@ -7,14 +7,26 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { listOrganizations } from "@/lib/organizations";
 import { organizationDashboardPath } from "@/lib/routes";
-import { toWorkspace, type Workspace } from "./dashboard-data";
+import {
+  getWorkspaceInitials,
+  toWorkspace,
+  type Workspace,
+} from "./dashboard-data";
 import { DashboardSidebar, type DashboardSection } from "./dashboard-sidebar";
 import { Icon } from "./icons";
 
 const OrganizationWorkspaceContext = createContext<Workspace | null>(null);
+const UpdateOrganizationNameContext = createContext<
+  ((name: string) => void) | null
+>(null);
 
 export function useOrganizationWorkspace(): Workspace | null {
   return useContext(OrganizationWorkspaceContext);
+}
+
+export function useUpdateOrganizationWorkspaceName():
+  ((name: string) => void) | null {
+  return useContext(UpdateOrganizationNameContext);
 }
 
 export function OrganizationShell({
@@ -133,56 +145,71 @@ export function OrganizationShell({
       ? "people"
       : pathname.endsWith("/files")
         ? "files"
-        : undefined;
+        : pathname.endsWith("/settings")
+          ? "settings"
+          : undefined;
   const homeHref = organizationDashboardPath(organizationId);
   const canViewAudit = workspace.role === "OWNER" || workspace.role === "ADMIN";
 
   return (
     <OrganizationWorkspaceContext.Provider value={workspace}>
-      <div className="dashboard-shell organization-app-shell">
-        <DashboardSidebar
-          activeSection={activeSection}
-          activeOrganizationPage={activeOrganizationPage}
-          canViewAudit={canViewAudit}
-          homeHref={homeHref}
-          isMobileOpen={isMobileOpen}
-          onMobileClose={() => setIsMobileOpen(false)}
-          onNotifications={() =>
-            router.push(
-              organizationDashboardPath(organizationId, "notifications"),
-            )
-          }
-          onSectionChange={() => undefined}
-          onWorkspaceChange={(nextOrganizationId) => {
-            setIsMobileOpen(false);
-            router.push(organizationDashboardPath(nextOrganizationId));
-          }}
-          workspaceId={organizationId}
-          workspaces={workspaces}
-        />
-        {isMobileOpen && (
-          <button
-            aria-label="Close navigation"
-            className="sidebar-backdrop"
-            onClick={() => setIsMobileOpen(false)}
-            type="button"
+      <UpdateOrganizationNameContext.Provider
+        value={(name) =>
+          setWorkspaces(
+            (current) =>
+              current?.map((item) =>
+                item.id === organizationId
+                  ? { ...item, name, initials: getWorkspaceInitials(name) }
+                  : item,
+              ) ?? null,
+          )
+        }
+      >
+        <div className="dashboard-shell organization-app-shell">
+          <DashboardSidebar
+            activeSection={activeSection}
+            activeOrganizationPage={activeOrganizationPage}
+            canViewAudit={canViewAudit}
+            homeHref={homeHref}
+            isMobileOpen={isMobileOpen}
+            onMobileClose={() => setIsMobileOpen(false)}
+            onNotifications={() =>
+              router.push(
+                organizationDashboardPath(organizationId, "notifications"),
+              )
+            }
+            onSectionChange={() => undefined}
+            onWorkspaceChange={(nextOrganizationId) => {
+              setIsMobileOpen(false);
+              router.push(organizationDashboardPath(nextOrganizationId));
+            }}
+            workspaceId={organizationId}
+            workspaces={workspaces}
           />
-        )}
-        <div className="main-area organization-main-area">
-          <header className="organization-mobile-header">
+          {isMobileOpen && (
             <button
-              aria-label="Open navigation"
-              className="mobile-menu-button"
-              onClick={() => setIsMobileOpen(true)}
+              aria-label="Close navigation"
+              className="sidebar-backdrop"
+              onClick={() => setIsMobileOpen(false)}
               type="button"
-            >
-              <Icon name="menu" width={22} height={22} />
-            </button>
-            <Link href={homeHref}>NEXUS</Link>
-          </header>
-          {children}
+            />
+          )}
+          <div className="main-area organization-main-area">
+            <header className="organization-mobile-header">
+              <button
+                aria-label="Open navigation"
+                className="mobile-menu-button"
+                onClick={() => setIsMobileOpen(true)}
+                type="button"
+              >
+                <Icon name="menu" width={22} height={22} />
+              </button>
+              <Link href={homeHref}>NEXUS</Link>
+            </header>
+            {children}
+          </div>
         </div>
-      </div>
+      </UpdateOrganizationNameContext.Provider>
     </OrganizationWorkspaceContext.Provider>
   );
 }

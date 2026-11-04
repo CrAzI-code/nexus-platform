@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatRelativeTime, getProjectProgress, getTaskSummary, type Task } from "./dashboard-data";
+import {
+  formatRelativeTime,
+  getProjectProgress,
+  getTaskSummary,
+  getWorkspaceInitials,
+  type Task,
+} from "./dashboard-data";
 
 const tasks: Task[] = [
   { id: "1", workspaceId: "org", projectId: "a", title: "Done", status: "DONE", priority: "LOW", dueDate: "2020-01-01", archivedAt: null },
@@ -27,5 +33,10 @@ describe("dashboard data selectors", () => {
     const now = Date.parse("2026-11-02T12:00:00.000Z");
     expect(formatRelativeTime("2026-11-02T11:55:00.000Z", now)).toBe("5m ago");
     expect(formatRelativeTime("invalid", now)).toBe("Unknown time");
+  });
+
+  it("keeps workspace initials in sync with renamed organizations", () => {
+    expect(getWorkspaceInitials("  Nexus Platform  ")).toBe("NP");
+    expect(getWorkspaceInitials("   ")).toBe("NX");
   });
 });

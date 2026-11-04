@@ -12,20 +12,23 @@ export type Workspace = {
   role: "OWNER" | "ADMIN" | "MANAGER" | "MEMBER";
 };
 
-export function toWorkspace(organization: OrganizationMembership): Workspace {
-  const initials = organization.name
+export function getWorkspaceInitials(name: string): string {
+  const initials = name
     .trim()
     .split(/\s+/u)
     .slice(0, 2)
     .map((part) => part[0] ?? "")
     .join("")
     .toUpperCase();
+  return initials || "NX";
+}
 
+export function toWorkspace(organization: OrganizationMembership): Workspace {
   return {
     id: organization.id,
     name: organization.name,
     plan: `${organization.role.toLowerCase()} workspace`,
-    initials: initials || "NX",
+    initials: getWorkspaceInitials(organization.name),
     role: organization.role,
   };
 }
@@ -86,6 +89,8 @@ const activityLabels: Record<AuditLogAction, string> = {
   TASK_ASSIGNED: "assigned a task",
   TASK_UPDATED: "updated a task",
   TASK_STATUS_CHANGED: "changed a task status",
+  TASK_BLOCKED: "blocked a task",
+  TASK_UNBLOCKED: "resolved a task blocker",
   TASK_ARCHIVED: "archived a task",
   TASK_RESTORED: "restored a task",
   FILE_UPLOADED: "uploaded a file",
