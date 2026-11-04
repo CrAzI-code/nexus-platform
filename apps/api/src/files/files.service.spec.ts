@@ -8,11 +8,6 @@ import { Readable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../prisma.service.js';
 import {
-  FILE_STORAGE_CONFIG,
-  getFilesConfiguration,
-  type FilesConfiguration,
-} from './file-storage.config.js';
-import {
   FILE_STORAGE_PROVIDER,
   type FileStorageProvider,
 } from './file-storage.js';
@@ -70,15 +65,6 @@ const scanner = {
   scan: vi.fn<MalwareScanner['scan']>(async () => ({ status: 'clean' })),
 } satisfies MalwareScanner;
 
-const configuration: FilesConfiguration = {
-  storage: { driver: 'local' },
-  security: {
-    scanRequired: false,
-    scanner: { driver: 'none' },
-    orphanMinimumAgeMs: 86_400_000,
-  },
-};
-
 function makeFileRow(overrides: Record<string, unknown> = {}) {
   return {
     id: fileId,
@@ -108,6 +94,16 @@ function textFile(originalname = 'notes.txt', content = Buffer.from('safe')) {
   };
 }
 
+function pngFile() {
+  const buffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  return {
+    originalname: 'task-preview.png',
+    mimetype: 'image/png',
+    size: buffer.length,
+    buffer,
+  };
+}
+
 describe('FilesService', () => {
   let service: FilesService;
 
@@ -128,7 +124,6 @@ describe('FilesService', () => {
       async (operation: (tx: typeof transaction) => Promise<unknown>) =>
         operation(transaction),
     );
-    configuration.security.scanRequired = false;
     storage.putQuarantined.mockResolvedValue(undefined);
     storage.promoteQuarantined.mockResolvedValue(undefined);
     storage.openActive.mockResolvedValue({
@@ -144,7 +139,6 @@ describe('FilesService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: FILE_STORAGE_PROVIDER, useValue: storage },
         { provide: MALWARE_SCANNER_PROVIDER, useValue: scanner },
-        { provide: FILE_STORAGE_CONFIG, useValue: configuration },
       ],
     }).compile();
     service = module.get(FilesService);
@@ -166,6 +160,10 @@ describe('FilesService', () => {
     storage.promoteQuarantined.mockImplementation(async () => {
       operations.push('storage-promote');
     });
+    scanner.scan.mockImplementation(async () => {
+      operations.push('scan');
+      return { status: 'clean' };
+    });
 
     await expect(
       service.uploadProjectFile(organizationId, projectId, userId, textFile()),
@@ -181,6 +179,7 @@ describe('FilesService', () => {
       'transaction-start',
       'transaction-end',
       'quarantine-write',
+      'scan',
       'storage-promote',
       'transaction-start',
       'transaction-end',
@@ -257,9 +256,14 @@ describe('FilesService', () => {
     expect(storage.putQuarantined).not.toHaveBeenCalled();
   });
 
-  it('creates a tenant-constrained task association in the metadata transaction', async () => {
+  it('uploads task-specific images using only Prisma-supported nested relation fields', async () => {
     transaction.fileAttachment.create.mockResolvedValue(
-      makeFileRow({ taskAttachment: { taskId } }),
+      makeFileRow({
+        originalName: 'task-preview.png',
+        mimeType: 'image/png',
+        sizeBytes: pngFile().size,
+        taskAttachment: { taskId },
+      }),
     );
 
     await expect(
@@ -268,18 +272,21 @@ describe('FilesService', () => {
         projectId,
         taskId,
         userId,
-        textFile(),
+        pngFile(),
       ),
-    ).resolves.toMatchObject({ taskId });
+    ).resolves.toMatchObject({
+      taskId,
+      originalName: 'task-preview.png',
+      mimeType: 'image/png',
+    });
 
     expect(transaction.fileAttachment.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           organizationId,
           projectId,
-          taskAttachment: {
-            create: { organizationId, projectId, taskId },
-          },
+          mimeType: 'image/png',
+          taskAttachment: { create: { taskId } },
         }),
       }),
     );
@@ -287,14 +294,45 @@ describe('FilesService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           after: {
-            mimeType: 'text/plain',
-            sizeBytes: 4,
+            mimeType: 'image/png',
+            sizeBytes: pngFile().size,
             scanStatus: 'CLEAN',
             taskId,
           },
         }),
       }),
     );
+  });
+
+  it('cleans the promoted object when metadata creation fails after promotion', async () => {
+    const relationValidationError = new Error(
+      'Unknown argument `organizationId`. Available options are marked with ?.',
+    );
+    transaction.fileAttachment.create.mockRejectedValueOnce(
+      relationValidationError,
+    );
+
+    await expect(
+      service.uploadTaskAttachment(
+        organizationId,
+        projectId,
+        taskId,
+        userId,
+        pngFile(),
+      ),
+    ).rejects.toBe(relationValidationError);
+
+    expect(transaction.fileAttachment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          taskAttachment: { create: { taskId } },
+        }),
+      }),
+    );
+    expect(storage.putQuarantined).toHaveBeenCalledOnce();
+    expect(storage.promoteQuarantined).toHaveBeenCalledOnce();
+    expect(storage.remove).toHaveBeenCalledWith(expect.any(String), 'active');
+    expect(transaction.auditLog.create).not.toHaveBeenCalled();
   });
 
   it('does not expose project files to an unassigned organization member', async () => {
@@ -361,8 +399,9 @@ describe('FilesService', () => {
         orderBy: [{ originalName: 'asc' }, { id: 'asc' }],
       }),
     );
-    expect(transaction.fileAttachment.findMany.mock.calls[0][0].where)
-      .not.toHaveProperty('project');
+    expect(
+      transaction.fileAttachment.findMany.mock.calls[0][0].where,
+    ).not.toHaveProperty('project');
   });
 
   it('limits organization file results for members to active project membership', async () => {
@@ -545,8 +584,7 @@ describe('FilesService', () => {
     expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
   });
 
-  it('fails safely when scanning is required but unavailable', async () => {
-    configuration.security.scanRequired = true;
+  it('fails safely when the local malware scanner is unavailable', async () => {
     scanner.scan.mockResolvedValue({ status: 'unavailable' });
 
     await expect(
@@ -555,15 +593,13 @@ describe('FilesService', () => {
 
     expect(storage.promoteQuarantined).not.toHaveBeenCalled();
     expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
+    expect(storage.remove).toHaveBeenCalledWith(
+      expect.any(String),
+      'quarantine',
+    );
   });
 
-  it('fails safely when the configured production scanner throws', async () => {
-    configuration.security.scanRequired = getFilesConfiguration({
-      NODE_ENV: 'production',
-      FILE_STORAGE_DRIVER: 's3',
-      FILE_S3_BUCKET: 'private-nexus-files',
-      FILE_S3_REGION: 'eu-west-1',
-    }).security.scanRequired;
+  it('fails safely when the configured malware scanner throws', async () => {
     scanner.scan.mockRejectedValue(new Error('scanner connection failed'));
 
     await expect(
@@ -586,15 +622,9 @@ describe('FilesService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('blocks attempts to download unscanned files under production policy', async () => {
-    configuration.security.scanRequired = getFilesConfiguration({
-      NODE_ENV: 'production',
-      FILE_STORAGE_DRIVER: 's3',
-      FILE_S3_BUCKET: 'private-nexus-files',
-      FILE_S3_REGION: 'eu-west-1',
-    }).security.scanRequired;
+  it('blocks attempts to download unscanned files in every environment', async () => {
     transaction.fileAttachment.findFirst.mockResolvedValue(
-      makeFileRow({ scanStatus: 'UNSCANNED' }),
+      makeFileRow({ scanStatus: 'UNSCANNED', mimeType: 'image/png' }),
     );
 
     await expect(
@@ -603,25 +633,18 @@ describe('FilesService', () => {
     expect(storage.openActive).not.toHaveBeenCalled();
   });
 
-  it('does not persist an unscanned upload when production scanner configuration is missing', async () => {
-    const productionConfiguration = getFilesConfiguration({
-      NODE_ENV: 'production',
-      FILE_STORAGE_DRIVER: 's3',
-      FILE_S3_BUCKET: 'private-nexus-files',
-      FILE_S3_REGION: 'eu-west-1',
-    });
-    configuration.security.scanRequired =
-      productionConfiguration.security.scanRequired;
-    scanner.scan.mockResolvedValue({ status: 'unavailable' });
+  it('does not advertise preview for legacy unscanned image metadata', async () => {
+    transaction.fileAttachment.findMany.mockResolvedValue([
+      makeFileRow({ scanStatus: 'UNSCANNED', mimeType: 'image/png' }),
+    ]);
 
     await expect(
-      service.uploadProjectFile(organizationId, projectId, userId, textFile()),
-    ).rejects.toThrow('security scanning is temporarily unavailable');
-
-    expect(productionConfiguration.security.scanner).toEqual({
-      driver: 'none',
+      service.listProjectFiles(organizationId, projectId, userId, {
+        page: 1,
+        pageSize: 25,
+      }),
+    ).resolves.toMatchObject({
+      items: [{ scanStatus: 'UNSCANNED', canPreview: false }],
     });
-    expect(storage.promoteQuarantined).not.toHaveBeenCalled();
-    expect(transaction.fileAttachment.create).not.toHaveBeenCalled();
   });
 });

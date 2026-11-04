@@ -17,5 +17,56 @@ services:
       timeout: 5s
       retries: 5
 
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: nexus-rustfs
+    profiles: ["storage"]
+    restart: unless-stopped
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY-}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY-}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - nexus_rustfs_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:9000/health/ready && curl -fsS http://127.0.0.1:9001/rustfs/console/health",
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: nexus-clamav
+    profiles: ["storage"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - nexus_clamav_db:/var/lib/clamav
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "clamdscan",
+          "--ping=1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 3m
+
 volumes:
   nexus_postgres_data:
+  nexus_rustfs_data:
+  nexus_clamav_db:

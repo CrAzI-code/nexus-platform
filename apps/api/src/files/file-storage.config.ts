@@ -22,6 +22,12 @@ export interface FileSecurityConfig {
         url: string;
         token?: string;
         timeoutMs: number;
+      }
+    | {
+        driver: 'clamav';
+        host: string;
+        port: number;
+        timeoutMs: number;
       };
   orphanMinimumAgeMs: number;
 }
@@ -65,39 +71,66 @@ export function getFilesConfiguration(
 
   const scanRequired = parseBoolean(
     environment.FILE_MALWARE_SCAN_REQUIRED,
-    production,
+    true,
     'FILE_MALWARE_SCAN_REQUIRED',
   );
-  if (production && !scanRequired) {
-    throw new Error(
-      'FILE_MALWARE_SCAN_REQUIRED cannot be false in production.',
-    );
+  if (!scanRequired) {
+    throw new Error('FILE_MALWARE_SCAN_REQUIRED cannot be false.');
   }
   const scannerDriver =
-    environment.FILE_MALWARE_SCANNER_DRIVER?.trim().toLowerCase() || 'none';
-  if (scannerDriver !== 'none' && scannerDriver !== 'http') {
-    throw new Error('FILE_MALWARE_SCANNER_DRIVER must be none or http.');
+    environment.FILE_MALWARE_SCANNER_DRIVER?.trim().toLowerCase() ||
+    (production ? 'none' : 'clamav');
+  if (
+    scannerDriver !== 'none' &&
+    scannerDriver !== 'http' &&
+    scannerDriver !== 'clamav'
+  ) {
+    throw new Error(
+      'FILE_MALWARE_SCANNER_DRIVER must be none, http, or clamav.',
+    );
   }
   const scanner: FileSecurityConfig['scanner'] =
     scannerDriver === 'none'
       ? { driver: 'none' }
-      : {
-          driver: 'http',
-          url: parseScannerUrl(
-            required(environment, 'FILE_MALWARE_SCANNER_URL'),
-            production,
-          ),
-          timeoutMs: parseInteger(
-            environment.FILE_MALWARE_SCANNER_TIMEOUT_MS,
-            10_000,
-            1_000,
-            60_000,
-            'FILE_MALWARE_SCANNER_TIMEOUT_MS',
-          ),
-          ...(environment.FILE_MALWARE_SCANNER_TOKEN?.trim()
-            ? { token: environment.FILE_MALWARE_SCANNER_TOKEN.trim() }
-            : {}),
-        };
+      : scannerDriver === 'http'
+        ? {
+            driver: 'http',
+            url: parseScannerUrl(
+              required(environment, 'FILE_MALWARE_SCANNER_URL'),
+              production,
+            ),
+            timeoutMs: parseInteger(
+              environment.FILE_MALWARE_SCANNER_TIMEOUT_MS,
+              10_000,
+              1_000,
+              60_000,
+              'FILE_MALWARE_SCANNER_TIMEOUT_MS',
+            ),
+            ...(environment.FILE_MALWARE_SCANNER_TOKEN?.trim()
+              ? { token: environment.FILE_MALWARE_SCANNER_TOKEN.trim() }
+              : {}),
+          }
+        : {
+            driver: 'clamav',
+            host: parseScannerHost(
+              environment.FILE_MALWARE_SCANNER_HOST,
+              production,
+            ),
+            port: parseInteger(
+              environment.FILE_MALWARE_SCANNER_PORT,
+              3310,
+              1,
+              65_535,
+              'FILE_MALWARE_SCANNER_PORT',
+            ),
+            timeoutMs: parseInteger(
+              environment.FILE_MALWARE_SCANNER_TIMEOUT_MS,
+              10_000,
+              1_000,
+              60_000,
+              'FILE_MALWARE_SCANNER_TIMEOUT_MS',
+            ),
+          };
 
   return {
     storage,
@@ -221,6 +254,19 @@ function parseScannerUrl(value: string, production: boolean): string {
     );
   }
   return url.toString();
+}
+
+function parseScannerHost(
+  value: string | undefined,
+  production: boolean,
+): string {
+  const host = value?.trim() || (production ? '' : '127.0.0.1');
+  if (!host || host.length > 255 || /[\s/\\]/u.test(host)) {
+    throw new Error(
+      'FILE_MALWARE_SCANNER_HOST must be a valid hostname or IP address.',
+    );
+  }
+  return host;
 }
 
 function isLoopback(hostname: string): boolean {

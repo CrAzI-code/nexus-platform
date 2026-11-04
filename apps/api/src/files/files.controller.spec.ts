@@ -73,6 +73,61 @@ describe('FilesController HTTP authorization and streaming', () => {
     expect(files.listOrganizationFiles).not.toHaveBeenCalled();
   });
 
+  it('rejects unauthenticated uploads before calling the file service', async () => {
+    await request(app.getHttpServer())
+      .post(`/organizations/${organizationId}/projects/${projectId}/files`)
+      .attach('file', Buffer.from('safe'), {
+        filename: 'notes.txt',
+        contentType: 'text/plain',
+      })
+      .expect(401);
+
+    expect(files.uploadProjectFile).not.toHaveBeenCalled();
+  });
+
+  it('passes authenticated multipart file bytes to the project upload service', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    files.uploadProjectFile.mockResolvedValue({
+      id: fileId,
+      projectId,
+      taskId: null,
+      originalName: 'preview.png',
+      mimeType: 'image/png',
+      sizeBytes: png.length,
+      scanStatus: 'CLEAN',
+      uploadedAt: new Date('2026-11-02T18:00:00.000Z'),
+      uploaderName: 'Alex',
+      canPreview: true,
+      canRemove: true,
+    });
+
+    const response = await request(app.getHttpServer())
+      .post(`/organizations/${organizationId}/projects/${projectId}/files`)
+      .set('Authorization', 'Bearer integration-test-token')
+      .attach('file', png, {
+        filename: 'preview.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      id: fileId,
+      originalName: 'preview.png',
+      scanStatus: 'CLEAN',
+    });
+    expect(files.uploadProjectFile).toHaveBeenCalledWith(
+      organizationId,
+      projectId,
+      '4a42c365-ed61-4c80-a5a2-f3fcba6a71cb',
+      expect.objectContaining({
+        originalname: 'preview.png',
+        mimetype: 'image/png',
+        size: png.length,
+        buffer: png,
+      }),
+    );
+  });
+
   it('passes validated organization file filters to the service', async () => {
     files.listOrganizationFiles.mockResolvedValue({
       items: [],
@@ -139,5 +194,16 @@ describe('FilesController HTTP authorization and streaming', () => {
       )
       .set('Authorization', 'Bearer valid-session')
       .expect(404);
+  });
+
+  it('rejects unsupported inline content requests before file access', async () => {
+    await request(app.getHttpServer())
+      .get(
+        `/organizations/${organizationId}/projects/${projectId}/files/${fileId}/content?disposition=inline%0d%0a`,
+      )
+      .set('Authorization', 'Bearer integration-test-token')
+      .expect(400);
+
+    expect(files.getContent).not.toHaveBeenCalled();
   });
 });

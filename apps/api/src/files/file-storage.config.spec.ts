@@ -5,7 +5,15 @@ describe('getFilesConfiguration', () => {
   it('uses free local storage only outside production', () => {
     expect(getFilesConfiguration({ NODE_ENV: 'development' })).toMatchObject({
       storage: { driver: 'local' },
-      security: { scanRequired: false, scanner: { driver: 'none' } },
+      security: {
+        scanRequired: true,
+        scanner: {
+          driver: 'clamav',
+          host: '127.0.0.1',
+          port: 3310,
+          timeoutMs: 10_000,
+        },
+      },
     });
     expect(() => getFilesConfiguration({ NODE_ENV: 'production' })).toThrow(
       'FILE_STORAGE_DRIVER',
@@ -47,7 +55,16 @@ describe('getFilesConfiguration', () => {
         FILE_S3_REGION: 'eu-west-1',
         FILE_MALWARE_SCAN_REQUIRED: 'false',
       }),
-    ).toThrow('FILE_MALWARE_SCAN_REQUIRED cannot be false in production.');
+    ).toThrow('FILE_MALWARE_SCAN_REQUIRED cannot be false.');
+  });
+
+  it('does not allow local development to bypass malware scanning', () => {
+    expect(() =>
+      getFilesConfiguration({
+        NODE_ENV: 'development',
+        FILE_MALWARE_SCAN_REQUIRED: 'false',
+      }),
+    ).toThrow('FILE_MALWARE_SCAN_REQUIRED cannot be false.');
   });
 
   it('keeps scanning mandatory when no production scanner is configured', () => {
@@ -64,6 +81,69 @@ describe('getFilesConfiguration', () => {
         scanner: { driver: 'none' },
       },
     });
+  });
+
+  it('uses ClamAV by default for local development when scanner settings are omitted', () => {
+    expect(
+      getFilesConfiguration({
+        NODE_ENV: 'development',
+        FILE_MALWARE_SCAN_REQUIRED: 'true',
+      }).security.scanner,
+    ).toEqual({
+      driver: 'clamav',
+      host: '127.0.0.1',
+      port: 3310,
+      timeoutMs: 10_000,
+    });
+  });
+
+  it('preserves an explicit none driver so uploads still fail closed', () => {
+    expect(
+      getFilesConfiguration({
+        NODE_ENV: 'development',
+        FILE_MALWARE_SCANNER_DRIVER: 'none',
+      }).security.scanner,
+    ).toEqual({ driver: 'none' });
+  });
+
+  it('configures a local ClamAV daemon using the clamd TCP endpoint', () => {
+    expect(
+      getFilesConfiguration({
+        NODE_ENV: 'development',
+        FILE_MALWARE_SCAN_REQUIRED: 'true',
+        FILE_MALWARE_SCANNER_DRIVER: 'clamav',
+      }),
+    ).toMatchObject({
+      security: {
+        scanRequired: true,
+        scanner: {
+          driver: 'clamav',
+          host: '127.0.0.1',
+          port: 3310,
+          timeoutMs: 10_000,
+        },
+      },
+    });
+  });
+
+  it('requires an explicit scanner host and valid port in production', () => {
+    expect(() =>
+      getFilesConfiguration({
+        NODE_ENV: 'production',
+        FILE_STORAGE_DRIVER: 's3',
+        FILE_S3_BUCKET: 'private-nexus-files',
+        FILE_S3_REGION: 'us-east-1',
+        FILE_MALWARE_SCANNER_DRIVER: 'clamav',
+      }),
+    ).toThrow('FILE_MALWARE_SCANNER_HOST');
+
+    expect(() =>
+      getFilesConfiguration({
+        NODE_ENV: 'development',
+        FILE_MALWARE_SCANNER_DRIVER: 'clamav',
+        FILE_MALWARE_SCANNER_PORT: '70000',
+      }),
+    ).toThrow('FILE_MALWARE_SCANNER_PORT');
   });
 
   it('rejects insecure remote production endpoints and invalid values', () => {

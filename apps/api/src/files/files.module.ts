@@ -14,6 +14,7 @@ import {
 import { FilesController } from './files.controller.js';
 import { OrganizationFilesController } from './organization-files.controller.js';
 import { FilesService } from './files.service.js';
+import { ClamAvMalwareScanner } from './clamav-malware-scanner.js';
 import {
   HttpMalwareScanner,
   MALWARE_SCANNER_PROVIDER,
@@ -43,10 +44,12 @@ import { S3FileStorageProvider } from './s3-file-storage.js';
     {
       provide: MALWARE_SCANNER_PROVIDER,
       inject: [FILE_STORAGE_CONFIG],
-      useFactory: (configuration: FilesConfiguration) =>
-        configuration.security.scanner.driver === 'http'
-          ? new HttpMalwareScanner(configuration.security.scanner)
-          : new UnavailableMalwareScanner(),
+      useFactory: (configuration: FilesConfiguration) => {
+        const scanner = configuration.security.scanner;
+        if (scanner.driver === 'http') return new HttpMalwareScanner(scanner);
+        if (scanner.driver === 'clamav') return new ClamAvMalwareScanner(scanner);
+        return new UnavailableMalwareScanner();
+      },
     },
     OrphanedFileCleanupService,
   ],

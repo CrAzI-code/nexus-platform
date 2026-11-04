@@ -27,23 +27,30 @@ within the configured prefix.
 
 ## Malware scanning and quarantine
 
-Every new upload is written to the quarantine namespace before scanning. A clean
-verdict promotes it to the active namespace. Infected objects are rejected and
-removed. Scanner failures are recorded as unavailable, never as clean.
+Every new upload is written to the quarantine namespace before scanning. Only an
+explicit clean verdict promotes it to the active namespace and creates
+downloadable metadata. Infected content is rejected; scanner errors or missing
+scanner configuration fail the upload with HTTP 503 and do not promote the
+object. `FILE_MALWARE_SCAN_REQUIRED` must be `true` in every environment;
+`false` is rejected. Legacy `UNSCANNED` metadata remains labeled as unverified
+and cannot be previewed or downloaded.
 
-Production always requires scanning. `FILE_MALWARE_SCAN_REQUIRED=false` is rejected
-in production, and a missing scanner configuration leaves the scanner unavailable:
-uploads then fail with HTTP 503 unless it returns an explicit clean verdict. Local
-development and tests may set it to `false`, in which case metadata is stored as
-`UNSCANNED` and the UI labels it accordingly. Required-scan environments will not
-download unscanned legacy objects.
+The `clamav` scanner driver sends validated file bytes to clamd using its
+INSTREAM TCP protocol. Configure `FILE_MALWARE_SCANNER_HOST`,
+`FILE_MALWARE_SCANNER_PORT` (default `3310`), and
+`FILE_MALWARE_SCANNER_TIMEOUT_MS`. The local default is required and uses
+ClamAV. For the local Compose service, use
+`127.0.0.1` from a host API or `clamav` from another Compose container. Clamd's
+TCP protocol is unauthenticated, so keep its port restricted to trusted
+networks.
 
-The built-in HTTP scanner adapter uses `FILE_MALWARE_SCANNER_DRIVER=http` and sends
-the validated file bytes in a POST request to `FILE_MALWARE_SCANNER_URL`. The
-scanner must return JSON with exactly `{"status":"clean"}` or
-`{"status":"infected"}`. Configure the optional bearer token and timeout with
-`FILE_MALWARE_SCANNER_TOKEN` and `FILE_MALWARE_SCANNER_TIMEOUT_MS`. Use HTTPS in
-production unless the scanner is a loopback sidecar.
+The HTTP scanner adapter remains available with
+`FILE_MALWARE_SCANNER_DRIVER=http`; it POSTs validated file bytes to
+`FILE_MALWARE_SCANNER_URL`. The scanner must return JSON with exactly
+`{"status":"clean"}` or `{"status":"infected"}`. Configure the optional bearer
+token and timeout with `FILE_MALWARE_SCANNER_TOKEN` and
+`FILE_MALWARE_SCANNER_TIMEOUT_MS`. Use HTTPS in production unless the scanner
+is a loopback sidecar.
 
 ## Orphan cleanup
 
@@ -68,3 +75,37 @@ keep their soft-removed metadata and can be retried by repeating the removal req
 or rerunning cleanup after retention. Cleanup errors are surfaced and can be retried
 by rerunning the command. The minimum age prevents cleanup from racing an upload
 between object promotion and database commit.
+
+## Real-service file integration tests
+
+The opt-in file-storage e2e suite uses PostgreSQL, the configured private S3
+provider, and ClamAV; it never loads `.env` files. It refuses to connect unless
+the database URL points to loopback PostgreSQL database `nexus_file_e2e`.
+Create that dedicated test database and apply migrations before running the
+suite; do not point it at the normal `nexus` development database.
+
+Supply these variables directly in the test process or through a dedicated,
+ignored test environment file that is not either application `.env`:
+
+- `NEXUS_FILE_STORAGE_E2E=true`
+- `NEXUS_FILE_E2E_DATABASE_URL`: loopback URL ending in `/nexus_file_e2e`
+- `FILE_STORAGE_DRIVER=s3`, `FILE_S3_BUCKET`, `FILE_S3_REGION`,
+  `FILE_S3_ENDPOINT`, and `FILE_S3_FORCE_PATH_STYLE=true`
+- `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for the private test bucket
+- `FILE_MALWARE_SCAN_REQUIRED=true`, `FILE_MALWARE_SCANNER_DRIVER=clamav`,
+  `FILE_MALWARE_SCANNER_HOST=127.0.0.1`, and
+  `FILE_MALWARE_SCANNER_PORT=3310`
+
+Run only the suite after the test database has migrations:
+
+```powershell
+npm run test:e2e --workspace apps/api -- src/files/files-storage.e2e-spec.ts
+```
+
+The suite generates unique tenant records and an S3 key prefix per run, checks
+service credentials with a private-object readiness probe, and removes only its
+own metadata and objects. Clerk token verification is stubbed at the auth
+service boundary; the real guard, controllers, authorization service logic,
+database, S3 adapter, and ClamAV scanner remain in the request path. A transient
+storage deletion failure is injected once to verify API retry behavior; the
+retry itself removes the object through RustFS.

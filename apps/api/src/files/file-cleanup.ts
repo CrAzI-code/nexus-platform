@@ -1,13 +1,23 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module.js';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import { FileCleanupModule } from './file-cleanup.module.js';
 import { OrphanedFileCleanupService } from './orphaned-file-cleanup.service.js';
 
 const logger = new Logger('FileCleanup');
 const apply = process.argv.slice(2).includes('--apply');
-const application = await NestFactory.createApplicationContext(AppModule, {
-  logger: ['error', 'warn', 'log'],
+const apiEnvPath = fileURLToPath(new URL('../../.env', import.meta.url));
+dotenv.config({
+  path: apiEnvPath,
+  override: process.env.NODE_ENV !== 'production',
 });
+const application = await NestFactory.createApplicationContext(
+  FileCleanupModule,
+  {
+    logger: ['error', 'warn', 'log'],
+  },
+);
 
 try {
   const cleanup = application.get(OrphanedFileCleanupService);

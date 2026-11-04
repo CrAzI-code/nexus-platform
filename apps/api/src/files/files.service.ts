@@ -16,10 +16,6 @@ import type { OrganizationRole } from '../generated/prisma/client.js';
 import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
 import { PrismaService } from '../prisma.service.js';
 import {
-  FILE_STORAGE_CONFIG,
-  type FilesConfiguration,
-} from './file-storage.config.js';
-import {
   FILE_STORAGE_PROVIDER,
   type FileStorageProvider,
 } from './file-storage.js';
@@ -121,8 +117,6 @@ export class FilesService {
     private readonly storage: FileStorageProvider,
     @Inject(MALWARE_SCANNER_PROVIDER)
     private readonly scanner: MalwareScanner,
-    @Inject(FILE_STORAGE_CONFIG)
-    private readonly configuration: FilesConfiguration,
   ) {}
 
   listProjectFiles(
@@ -241,10 +235,7 @@ export class FilesService {
       );
     });
 
-    if (
-      this.configuration.security.scanRequired &&
-      file.scanStatus !== 'CLEAN'
-    ) {
+    if (file.scanStatus !== 'CLEAN') {
       throw new ServiceUnavailableException(
         'File security verification is required before download.',
       );
@@ -274,7 +265,8 @@ export class FilesService {
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       originalName: file.originalName,
-      canPreview: supportsInlinePreview(file.mimeType),
+      canPreview:
+        file.scanStatus === 'CLEAN' && supportsInlinePreview(file.mimeType),
     };
   }
 
@@ -439,10 +431,7 @@ export class FilesService {
       await this.removeQuietly(storageKey, 'quarantine', 'infected_cleanup');
       throw new BadRequestException('The file failed its security scan.');
     }
-    if (
-      scanResult.status === 'unavailable' &&
-      this.configuration.security.scanRequired
-    ) {
+    if (scanResult.status === 'unavailable') {
       await this.removeQuietly(
         storageKey,
         'quarantine',
@@ -462,10 +451,6 @@ export class FilesService {
       throw new InternalServerErrorException('File storage is unavailable.');
     }
 
-    const scanStatus =
-      scanResult.status === 'clean'
-        ? ('CLEAN' as const)
-        : ('UNSCANNED' as const);
     try {
       return await this.prisma.$transaction(async (transaction) => {
         const access = await this.requireProjectAccess(
@@ -498,11 +483,11 @@ export class FilesService {
             originalName: file.originalName,
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
-            scanStatus,
+            scanStatus: 'CLEAN',
             ...(taskId
               ? {
                   taskAttachment: {
-                    create: { organizationId, projectId, taskId },
+                    create: { taskId },
                   },
                 }
               : {}),
@@ -644,7 +629,8 @@ export class FilesService {
       scanStatus: file.scanStatus,
       uploadedAt: file.createdAt,
       uploaderName: file.uploaderMembership.user.name,
-      canPreview: supportsInlinePreview(file.mimeType),
+      canPreview:
+        file.scanStatus === 'CLEAN' && supportsInlinePreview(file.mimeType),
       canRemove:
         file.uploadedById === userId ||
         role === 'OWNER' ||
@@ -653,7 +639,9 @@ export class FilesService {
     };
   }
 
-  private getFileFilters(query: FileListQuery): Prisma.FileAttachmentWhereInput {
+  private getFileFilters(
+    query: FileListQuery,
+  ): Prisma.FileAttachmentWhereInput {
     return {
       ...(query.search
         ? { originalName: { contains: query.search, mode: 'insensitive' } }

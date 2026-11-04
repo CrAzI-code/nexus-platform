@@ -357,11 +357,22 @@ export default function OrganizationFilesView({
                 <div className="file-list-actions">
                   <button
                     className="file-action-button"
-                    disabled={busyFileId === file.id}
+                    disabled={
+                      busyFileId === file.id || file.scanStatus !== "CLEAN"
+                    }
+                    title={
+                      file.scanStatus === "CLEAN"
+                        ? "Download file"
+                        : "This file is unavailable until it has been scanned."
+                    }
                     onClick={() => void download(file)}
                     type="button"
                   >
-                    {busyFileId === file.id ? "Working…" : "Download"}
+                    {file.scanStatus !== "CLEAN"
+                      ? "Unverified"
+                      : busyFileId === file.id
+                        ? "Working…"
+                        : "Download"}
                   </button>
                   {file.canRemove && (
                     <button
