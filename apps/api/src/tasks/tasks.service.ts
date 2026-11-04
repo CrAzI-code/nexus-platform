@@ -52,6 +52,19 @@ const taskSelect = {
     },
   },
   _count: { select: { comments: true } },
+  blockers: {
+    where: { resolvedAt: null },
+    select: {
+      id: true,
+      reason: true,
+      createdById: true,
+      createdAt: true,
+      resolvedAt: true,
+      creator: { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+  },
 } satisfies Prisma.TaskSelect;
 
 const taskDetailsSelect = {
@@ -83,6 +96,20 @@ const taskDetailsSelect = {
           membership: { select: { user: { select: { name: true } } } },
         },
       },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  },
+  blockers: {
+    select: {
+      id: true,
+      reason: true,
+      createdById: true,
+      createdAt: true,
+      resolvedById: true,
+      resolvedAt: true,
+      creator: { select: { name: true } },
+      resolver: { select: { name: true } },
     },
     orderBy: { createdAt: 'desc' },
     take: 100,
@@ -124,6 +151,21 @@ export interface TaskSummaryResponse {
   commentCount: number;
   canManage: boolean;
   canAssignOthers: boolean;
+  activeBlocker: TaskBlockerSummaryResponse | null;
+}
+
+export interface TaskBlockerSummaryResponse {
+  id: string;
+  reason: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: Date;
+}
+
+export interface TaskBlockerHistoryResponse extends TaskBlockerSummaryResponse {
+  resolvedById: string | null;
+  resolvedByName: string | null;
+  resolvedAt: Date | null;
 }
 
 export interface TaskCommentResponse {
@@ -144,8 +186,10 @@ export interface TaskActivityResponse {
 }
 
 export interface TaskDetailsResponse extends TaskSummaryResponse {
+  canParticipate: boolean;
   comments: TaskCommentResponse[];
   activity: TaskActivityResponse[];
+  blockerHistory: TaskBlockerHistoryResponse[];
 }
 
 export interface TaskProjectMemberResponse {
@@ -252,7 +296,10 @@ export class TasksService {
     organizationId: string,
     projectId: string,
     userId: string,
-  ): Promise<{ members: TaskProjectMemberResponse[]; canAssignOthers: boolean }> {
+  ): Promise<{
+    members: TaskProjectMemberResponse[];
+    canAssignOthers: boolean;
+  }> {
     return this.prisma.$transaction(async (transaction) => {
       const access = await this.findProjectReadAccess(
         transaction,
@@ -280,8 +327,7 @@ export class TasksService {
             isCurrentUser: member.userId === userId,
           }))
           .sort((left, right) => left.name.localeCompare(right.name)),
-        canAssignOthers:
-          access.isProjectMember && this.canManage(access.role),
+        canAssignOthers: access.isProjectMember && this.canManage(access.role),
       };
     });
   }
@@ -293,7 +339,7 @@ export class TasksService {
     userId: string,
     input: UpdateTaskDto,
   ): Promise<TaskDetailsResponse> {
-    return this.prisma.$transaction(async (transaction) => {
+    return this.notifications.withTransaction(async (transaction, publish) => {
       const access = await this.requireProjectMemberAccess(
         transaction,
         organizationId,
@@ -324,6 +370,7 @@ export class TasksService {
         descriptionChanged?: boolean;
       } = {};
       const data: Prisma.TaskUpdateManyMutationInput = {};
+      let updatedDueAt: Date | null | undefined;
       if (input.title !== undefined && input.title !== task.title) {
         data.title = input.title;
         changes.push(`title from "${task.title}" to "${input.title}"`);
@@ -349,6 +396,7 @@ export class TasksService {
         const dueAt = this.toDueAt(input.dueAt);
         if (dueAt?.getTime() !== task.dueAt?.getTime()) {
           data.dueAt = dueAt;
+          updatedDueAt = dueAt;
           changes.push(
             `due date from ${task.dueAt?.toISOString().slice(0, 10) ?? 'none'} to ${dueAt?.toISOString().slice(0, 10) ?? 'none'}`,
           );
@@ -374,7 +422,9 @@ export class TasksService {
           data,
         });
         if (result.count !== 1) {
-          throw new ConflictException('This task changed. Reload and try again.');
+          throw new ConflictException(
+            'This task changed. Reload and try again.',
+          );
         }
         await this.recordActivity(
           transaction,
@@ -394,6 +444,14 @@ export class TasksService {
           before,
           after,
         });
+        if (updatedDueAt && task.status !== 'DONE') {
+          await this.notifyDueDateParticipants(
+            publish,
+            task,
+            userId,
+            updatedDueAt,
+          );
+        }
       }
 
       const updated = await this.findTaskDetails(
@@ -467,7 +525,9 @@ export class TasksService {
           data: { assigneeId: input.assigneeId },
         });
         if (result.count !== 1) {
-          throw new ConflictException('This task changed. Reload and try again.');
+          throw new ConflictException(
+            'This task changed. Reload and try again.',
+          );
         }
         const previousAssignee = task.assignee?.membership.user.name;
         const assignmentMessage = assigneeName
@@ -503,7 +563,7 @@ export class TasksService {
               projectId,
               type: 'TASK_ASSIGNED',
               title: 'Task assigned to you',
-              message: `You were assigned "${task.title}".`,
+              message: 'A task has been assigned to you.',
               resourceType: 'TASK',
               resourceId: taskId,
               eventKey: `task-assigned:${activityId}`,
@@ -529,6 +589,17 @@ export class TasksService {
     userId: string,
     input: ChangeTaskStatusDto,
   ): Promise<TaskDetailsResponse> {
+    if (input.status === 'BLOCKED') {
+      if (!input.blockerReason) {
+        throw new BadRequestException(
+          'Provide a blocker reason when setting a task to blocked.',
+        );
+      }
+      return this.createBlocker(organizationId, projectId, taskId, userId, {
+        reason: input.blockerReason,
+      });
+    }
+
     return this.notifications.withTransaction(async (transaction, publish) => {
       const access = await this.requireProjectMemberAccess(
         transaction,
@@ -545,6 +616,42 @@ export class TasksService {
       );
       this.assertTaskIsActive(task);
 
+      const activeBlocker = await transaction.taskBlocker.findFirst({
+        where: {
+          organizationId,
+          projectId,
+          taskId,
+          resolvedAt: null,
+        },
+        select: {
+          id: true,
+          reason: true,
+          priorStatus: true,
+          createdById: true,
+          createdAt: true,
+        },
+      });
+      if (activeBlocker) {
+        await this.resolveBlockerInTransaction(
+          transaction,
+          publish,
+          organizationId,
+          projectId,
+          taskId,
+          activeBlocker.id,
+          userId,
+          input.status,
+          task,
+        );
+        const updated = await this.findTaskDetails(
+          transaction,
+          organizationId,
+          projectId,
+          taskId,
+        );
+        return this.toDetails(updated, access.role);
+      }
+
       if (input.status !== task.status) {
         const result = await transaction.task.updateMany({
           where: {
@@ -557,7 +664,9 @@ export class TasksService {
           data: { status: input.status },
         });
         if (result.count !== 1) {
-          throw new ConflictException('This task changed. Reload and try again.');
+          throw new ConflictException(
+            'This task changed. Reload and try again.',
+          );
         }
       }
 
@@ -597,6 +706,177 @@ export class TasksService {
         );
       }
 
+      const updated = await this.findTaskDetails(
+        transaction,
+        organizationId,
+        projectId,
+        taskId,
+      );
+      return this.toDetails(updated, access.role);
+    });
+  }
+
+  async createBlocker(
+    organizationId: string,
+    projectId: string,
+    taskId: string,
+    userId: string,
+    input: { reason: string },
+  ): Promise<TaskDetailsResponse> {
+    try {
+      return await this.notifications.withTransaction(
+        async (transaction, publish) => {
+          const access = await this.requireProjectMemberAccess(
+            transaction,
+            organizationId,
+            projectId,
+            userId,
+          );
+          this.assertProjectIsActive(access);
+          const task = await this.findTask(
+            transaction,
+            organizationId,
+            projectId,
+            taskId,
+          );
+          this.assertTaskIsActive(task);
+
+          const existing = await transaction.taskBlocker.findFirst({
+            where: {
+              organizationId,
+              projectId,
+              taskId,
+              resolvedAt: null,
+            },
+            select: { id: true },
+          });
+          if (existing) {
+            throw new ConflictException(
+              'This task already has an active blocker.',
+            );
+          }
+
+          const priorStatus =
+            task.status === 'BLOCKED' ? 'IN_PROGRESS' : task.status;
+          const blocker = await transaction.taskBlocker.create({
+            data: {
+              organizationId,
+              projectId,
+              taskId,
+              reason: input.reason,
+              priorStatus,
+              createdById: userId,
+            },
+            select: { id: true },
+          });
+          if (task.status !== 'BLOCKED') {
+            const updatedTask = await transaction.task.updateMany({
+              where: {
+                id: taskId,
+                organizationId,
+                projectId,
+                archivedAt: null,
+                status: task.status,
+              },
+              data: { status: 'BLOCKED' },
+            });
+            if (updatedTask.count !== 1) {
+              throw new ConflictException(
+                'This task changed. Reload and try again.',
+              );
+            }
+            await AuditLogsService.record(transaction, {
+              organizationId,
+              actorId: userId,
+              action: 'TASK_STATUS_CHANGED',
+              targetType: 'TASK',
+              targetId: taskId,
+              before: { status: task.status },
+              after: { status: 'BLOCKED' },
+            });
+          }
+
+          await this.recordActivity(
+            transaction,
+            organizationId,
+            projectId,
+            taskId,
+            userId,
+            'BLOCKER_CREATED',
+            `Marked this task as blocked: ${input.reason}`,
+          );
+          await AuditLogsService.record(transaction, {
+            organizationId,
+            actorId: userId,
+            action: 'TASK_BLOCKED',
+            targetType: 'TASK',
+            targetId: taskId,
+            before: { activeBlockerId: null },
+            after: {
+              blockerId: blocker.id,
+              reason: input.reason,
+              status: 'BLOCKED',
+            },
+          });
+          await this.notifyBlockerParticipants(
+            transaction,
+            publish,
+            task,
+            userId,
+            blocker.id,
+            false,
+          );
+
+          const updated = await this.findTaskDetails(
+            transaction,
+            organizationId,
+            projectId,
+            taskId,
+          );
+          return this.toDetails(updated, access.role);
+        },
+      );
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        throw new ConflictException('This task already has an active blocker.');
+      }
+      throw error;
+    }
+  }
+
+  async resolveBlocker(
+    organizationId: string,
+    projectId: string,
+    taskId: string,
+    blockerId: string,
+    userId: string,
+  ): Promise<TaskDetailsResponse> {
+    return this.notifications.withTransaction(async (transaction, publish) => {
+      const access = await this.requireProjectMemberAccess(
+        transaction,
+        organizationId,
+        projectId,
+        userId,
+      );
+      this.assertProjectIsActive(access);
+      const task = await this.findTask(
+        transaction,
+        organizationId,
+        projectId,
+        taskId,
+      );
+      this.assertTaskIsActive(task);
+      await this.resolveBlockerInTransaction(
+        transaction,
+        publish,
+        organizationId,
+        projectId,
+        taskId,
+        blockerId,
+        userId,
+        undefined,
+        task,
+      );
       const updated = await this.findTaskDetails(
         transaction,
         organizationId,
@@ -655,7 +935,7 @@ export class TasksService {
         userId,
         comment.id,
         'TASK_COMMENT',
-        `A project member commented on "${task.title}".`,
+        'A project member commented on a task.',
         input.body,
       );
 
@@ -675,13 +955,7 @@ export class TasksService {
     taskId: string,
     userId: string,
   ): Promise<TaskDetailsResponse> {
-    return this.setArchived(
-      organizationId,
-      projectId,
-      taskId,
-      userId,
-      true,
-    );
+    return this.setArchived(organizationId, projectId, taskId, userId, true);
   }
 
   async restore(
@@ -690,13 +964,7 @@ export class TasksService {
     taskId: string,
     userId: string,
   ): Promise<TaskDetailsResponse> {
-    return this.setArchived(
-      organizationId,
-      projectId,
-      taskId,
-      userId,
-      false,
-    );
+    return this.setArchived(organizationId, projectId, taskId, userId, false);
   }
 
   private async setArchived(
@@ -733,7 +1001,9 @@ export class TasksService {
           data: { archivedAt: archived ? new Date() : null },
         });
         if (result.count !== 1) {
-          throw new ConflictException('This task changed. Reload and try again.');
+          throw new ConflictException(
+            'This task changed. Reload and try again.',
+          );
         }
         await this.recordActivity(
           transaction,
@@ -895,6 +1165,173 @@ export class TasksService {
     return activity.id;
   }
 
+  private async resolveBlockerInTransaction(
+    transaction: Transaction,
+    publish: (notifications: NewNotification[]) => Promise<void>,
+    organizationId: string,
+    projectId: string,
+    taskId: string,
+    blockerId: string,
+    actorId: string,
+    requestedStatus: TaskStatus | undefined,
+    task: TaskRow,
+  ): Promise<void> {
+    const blocker = await transaction.taskBlocker.findFirst({
+      where: {
+        id: blockerId,
+        organizationId,
+        projectId,
+        taskId,
+        resolvedAt: null,
+      },
+      select: {
+        id: true,
+        reason: true,
+        priorStatus: true,
+      },
+    });
+    if (!blocker) throw new NotFoundException('Active task blocker not found.');
+    if (task.status !== 'BLOCKED') {
+      throw new ConflictException(
+        'The task status no longer matches its active blocker.',
+      );
+    }
+
+    const resolvedAt = new Date();
+    const blockerUpdate = await transaction.taskBlocker.updateMany({
+      where: {
+        id: blockerId,
+        organizationId,
+        projectId,
+        taskId,
+        resolvedAt: null,
+      },
+      data: { resolvedById: actorId, resolvedAt },
+    });
+    if (blockerUpdate.count !== 1) {
+      throw new ConflictException(
+        'This blocker was already resolved. Reload and try again.',
+      );
+    }
+
+    const nextStatus =
+      requestedStatus ??
+      (blocker.priorStatus === 'BLOCKED' ? 'IN_PROGRESS' : blocker.priorStatus);
+    const taskUpdate = await transaction.task.updateMany({
+      where: {
+        id: taskId,
+        organizationId,
+        projectId,
+        archivedAt: null,
+        status: 'BLOCKED',
+      },
+      data: { status: nextStatus },
+    });
+    if (taskUpdate.count !== 1) {
+      throw new ConflictException('This task changed. Reload and try again.');
+    }
+
+    await this.recordActivity(
+      transaction,
+      organizationId,
+      projectId,
+      taskId,
+      actorId,
+      'BLOCKER_RESOLVED',
+      `Resolved blocker: ${blocker.reason}`,
+    );
+    await AuditLogsService.record(transaction, {
+      organizationId,
+      actorId,
+      action: 'TASK_UNBLOCKED',
+      targetType: 'TASK',
+      targetId: taskId,
+      before: { blockerId, reason: blocker.reason, status: 'BLOCKED' },
+      after: { resolved: true, status: nextStatus },
+    });
+    await this.notifyBlockerParticipants(
+      transaction,
+      publish,
+      task,
+      actorId,
+      blockerId,
+      true,
+    );
+  }
+
+  private async notifyBlockerParticipants(
+    transaction: Transaction,
+    publish: (notifications: NewNotification[]) => Promise<void>,
+    task: TaskRow,
+    actorId: string,
+    blockerId: string,
+    resolved: boolean,
+  ): Promise<void> {
+    const members = await transaction.projectMember.findMany({
+      where: {
+        organizationId: task.organizationId,
+        projectId: task.projectId,
+        status: 'ACTIVE',
+        membership: { status: 'ACTIVE' },
+      },
+      select: { userId: true },
+    });
+    const type = resolved ? 'TASK_UNBLOCKED' : 'TASK_BLOCKED';
+    await publish(
+      members
+        .filter((member) => member.userId !== actorId)
+        .map((member) => ({
+          recipientId: member.userId,
+          organizationId: task.organizationId,
+          projectId: task.projectId,
+          type,
+          title: resolved ? 'Task blocker resolved' : 'Task is blocked',
+          message: resolved
+            ? 'A task blocker was resolved.'
+            : 'A task was blocked.',
+          resourceType: 'TASK',
+          resourceId: task.id,
+          eventKey: `task-blocker:${blockerId}:${resolved ? 'resolved' : 'created'}:${member.userId}`,
+        })),
+    );
+  }
+
+  private async notifyDueDateParticipants(
+    publish: (notifications: NewNotification[]) => Promise<void>,
+    task: TaskRow,
+    actorId: string,
+    dueAt: Date,
+  ): Promise<void> {
+    const recipientIds = new Set([
+      task.creator.userId,
+      ...(task.assignee ? [task.assignee.userId] : []),
+    ]);
+    recipientIds.delete(actorId);
+    if (recipientIds.size === 0) return;
+
+    const dueDate = dueAt.toISOString().slice(0, 10);
+    await publish(
+      [...recipientIds].map((recipientId) => ({
+        recipientId,
+        organizationId: task.organizationId,
+        projectId: task.projectId,
+        type: 'TASK_DUE_DATE',
+        title: 'Task due date updated',
+        message: `A task you follow is due on ${dueDate}.`,
+        resourceType: 'TASK',
+        resourceId: task.id,
+        eventKey: `task-due-date:${task.id}:${dueAt.toISOString()}:${recipientId}`,
+      })),
+    );
+  }
+
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
+  }
+
   private async notifyTaskParticipants(
     transaction: Transaction,
     publish: (notifications: NewNotification[]) => Promise<void>,
@@ -933,17 +1370,15 @@ export class TasksService {
         select: { authorId: true },
         distinct: ['authorId'],
       });
-      for (const commenter of commenters) involvedUserIds.add(commenter.authorId);
+      for (const commenter of commenters)
+        involvedUserIds.add(commenter.authorId);
     }
 
     const mentionedUserIds = new Set<string>();
     if (commentBody) {
       for (const member of members) {
         if (
-          this.commentMentionsName(
-            commentBody,
-            member.membership.user.name,
-          )
+          this.commentMentionsName(commentBody, member.membership.user.name)
         ) {
           mentionedUserIds.add(member.userId);
         }
@@ -969,7 +1404,7 @@ export class TasksService {
               ? 'New comment on a task'
               : 'Task status changed',
           message: isMention
-            ? `You were mentioned in a comment on "${task.title}".`
+            ? 'You were mentioned in a task comment.'
             : defaultMessage,
           resourceType: 'TASK',
           resourceId: task.id,
@@ -991,7 +1426,9 @@ export class TasksService {
 
   private assertProjectIsActive(access: ProjectAccess): void {
     if (access.projectStatus !== 'ACTIVE') {
-      throw new ConflictException('Tasks in archived projects cannot be changed.');
+      throw new ConflictException(
+        'Tasks in archived projects cannot be changed.',
+      );
     }
   }
 
@@ -1024,6 +1461,9 @@ export class TasksService {
     role: OrganizationRole,
     isProjectMember = true,
   ): TaskSummaryResponse {
+    const activeBlocker = task.blockers.find(
+      (blocker) => blocker.resolvedAt === null,
+    );
     return {
       id: task.id,
       projectId: task.projectId,
@@ -1050,6 +1490,15 @@ export class TasksService {
       commentCount: task._count.comments,
       canManage: isProjectMember && this.canManage(role),
       canAssignOthers: isProjectMember && this.canManage(role),
+      activeBlocker: activeBlocker
+        ? {
+            id: activeBlocker.id,
+            reason: activeBlocker.reason,
+            createdById: activeBlocker.createdById,
+            createdByName: displayAttributionName(activeBlocker.creator.name),
+            createdAt: activeBlocker.createdAt,
+          }
+        : null,
     };
   }
 
@@ -1060,6 +1509,7 @@ export class TasksService {
   ): TaskDetailsResponse {
     return {
       ...this.toSummary(task, role, isProjectMember),
+      canParticipate: isProjectMember,
       comments: [...task.comments].reverse().map((comment) => ({
         id: comment.id,
         authorId: comment.authorId,
@@ -1078,6 +1528,18 @@ export class TasksService {
         type: activity.type,
         message: activity.message,
         createdAt: activity.createdAt,
+      })),
+      blockerHistory: [...task.blockers].reverse().map((blocker) => ({
+        id: blocker.id,
+        reason: blocker.reason,
+        createdById: blocker.createdById,
+        createdByName: displayAttributionName(blocker.creator.name),
+        createdAt: blocker.createdAt,
+        resolvedById: blocker.resolvedById,
+        resolvedByName: blocker.resolver
+          ? displayAttributionName(blocker.resolver.name)
+          : null,
+        resolvedAt: blocker.resolvedAt,
       })),
     };
   }
