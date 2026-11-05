@@ -130,7 +130,7 @@ export class ProjectsService {
           projectId: project.id,
           type: 'PROJECT_ADDED',
           title: 'New project created',
-          message: `A new project, "${project.name}", is ready.`,
+          message: 'A new project is available in your organization.',
           resourceType: 'PROJECT',
           resourceId: project.id,
           eventKey: `project-created:${project.id}:${recipientId}`,
@@ -279,7 +279,7 @@ export class ProjectsService {
     actorId: string,
     memberUserId: string,
   ): Promise<ProjectMemberResponse> {
-    return this.withSerializableRetry(async (transaction) => {
+    return this.withSerializableRetry(async (transaction, publish) => {
       const membership = await this.findActiveMembership(
         transaction,
         organizationId,
@@ -353,6 +353,21 @@ export class ProjectsService {
             : {}),
           after: { status: projectMember.status },
         });
+        if (memberUserId !== actorId) {
+          await publish([
+            {
+              recipientId: memberUserId,
+              organizationId,
+              projectId,
+              type: 'PROJECT_ADDED',
+              title: 'Added to a project',
+              message: 'You now have access to a project.',
+              resourceType: 'PROJECT',
+              resourceId: projectId,
+              eventKey: `project-member-added:${projectMember.id}:${randomUUID()}`,
+            },
+          ]);
+        }
       }
 
       return {
@@ -511,7 +526,7 @@ export class ProjectsService {
           userId,
           randomUUID(),
           'Project updated',
-          `"${updatedProject.name}" has new project details.`,
+          'A project you belong to was updated.',
         );
       }
 
@@ -579,7 +594,7 @@ export class ProjectsService {
           userId,
           randomUUID(),
           'Project archived',
-          `"${archivedProject.name}" was archived.`,
+          'A project you belong to was archived.',
         );
       }
       return this.toResponse(archivedProject, membership.role);
@@ -672,11 +687,14 @@ export class ProjectsService {
   }
 
   private async withSerializableRetry<T>(
-    operation: (transaction: Prisma.TransactionClient) => Promise<T>,
+    operation: (
+      transaction: Prisma.TransactionClient,
+      publish: (notifications: NewNotification[]) => Promise<void>,
+    ) => Promise<T>,
   ): Promise<T> {
     for (let attempt = 1; attempt <= SERIALIZABLE_RETRIES; attempt += 1) {
       try {
-        return await this.prisma.$transaction(operation, {
+        return await this.notifications.withTransaction(operation, {
           isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
         });
       } catch (error) {

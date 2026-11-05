@@ -1,6 +1,6 @@
-import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { Suspense } from "react";
+import { SignInClient } from "./sign-in-client";
 
 export default function SignInPage() {
   return (
@@ -17,7 +17,7 @@ export default function SignInPage() {
         </div>
         <div className="auth-form">
           <Suspense fallback={<div className="auth-loading">Loading sign-in…</div>}>
-            <SignIn />
+            <SignInClient />
           </Suspense>
         </div>
       </section>

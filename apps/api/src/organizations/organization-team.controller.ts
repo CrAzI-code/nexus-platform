@@ -25,6 +25,7 @@ import {
   OrganizationTeamService,
   type AcceptedInvitationResponse,
   type CreatedInvitationResponse,
+  type DeclinedInvitationResponse,
   type InvitationAcceptanceDetails,
   type OrganizationInvitationResponse,
   type OrganizationMemberResponse,
@@ -75,6 +76,31 @@ export class OrganizationTeamController {
       expiresAt: created.invitation.expiresAt,
     });
 
+    return {
+      invitation: created.invitation,
+      invitationToken: created.invitationToken,
+      emailDeliveryStatus,
+    };
+  }
+
+  @Post('invitations/:invitationId/resend')
+  async resendInvitation(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('invitationId', ParseUUIDPipe) invitationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CreatedInvitationResponse> {
+    const created = await this.team.resendInvitation(
+      organizationId,
+      invitationId,
+      user.id,
+    );
+    const emailDeliveryStatus = await this.email.sendOrganizationInvitation({
+      recipientEmail: created.invitation.email,
+      organizationName: created.organizationName,
+      inviterName: user.name.trim() || 'A NEXUS teammate',
+      invitationToken: created.invitationToken,
+      expiresAt: created.invitation.expiresAt,
+    });
     return {
       invitation: created.invitation,
       invitationToken: created.invitationToken,
@@ -146,12 +172,38 @@ export class InvitationAcceptanceController {
     );
   }
 
+  @Post(':invitationId/decline')
+  declineById(
+    @Param('invitationId', ParseUUIDPipe) invitationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<DeclinedInvitationResponse> {
+    return this.team.declineInvitationById(
+      invitationId,
+      user.id,
+      user.email,
+      user.primaryEmailVerified === true,
+    );
+  }
+
   @Post('accept')
   accept(
     @CurrentUser() user: AuthenticatedUser,
     @Body(AcceptInvitationPipe) body: AcceptInvitationDto,
   ): Promise<AcceptedInvitationResponse> {
     return this.team.acceptInvitation(
+      body.token,
+      user.id,
+      user.email,
+      user.primaryEmailVerified === true,
+    );
+  }
+
+  @Post('decline')
+  decline(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(AcceptInvitationPipe) body: AcceptInvitationDto,
+  ): Promise<DeclinedInvitationResponse> {
+    return this.team.declineInvitation(
       body.token,
       user.id,
       user.email,

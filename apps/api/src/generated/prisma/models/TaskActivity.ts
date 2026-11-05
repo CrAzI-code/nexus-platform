@@ -208,6 +208,7 @@ export type TaskActivityWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"TaskActivity"> | Date | string
   task?: Prisma.XOR<Prisma.TaskScalarRelationFilter, Prisma.TaskWhereInput>
   actor?: Prisma.XOR<Prisma.ProjectMemberScalarRelationFilter, Prisma.ProjectMemberWhereInput>
+  automationExecutions?: Prisma.WorkflowAutomationExecutionListRelationFilter
 }
 
 export type TaskActivityOrderByWithRelationInput = {
@@ -221,6 +222,7 @@ export type TaskActivityOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   task?: Prisma.TaskOrderByWithRelationInput
   actor?: Prisma.ProjectMemberOrderByWithRelationInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionOrderByRelationAggregateInput
 }
 
 export type TaskActivityWhereUniqueInput = Prisma.AtLeast<{
@@ -237,6 +239,7 @@ export type TaskActivityWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"TaskActivity"> | Date | string
   task?: Prisma.XOR<Prisma.TaskScalarRelationFilter, Prisma.TaskWhereInput>
   actor?: Prisma.XOR<Prisma.ProjectMemberScalarRelationFilter, Prisma.ProjectMemberWhereInput>
+  automationExecutions?: Prisma.WorkflowAutomationExecutionListRelationFilter
 }, "id">
 
 export type TaskActivityOrderByWithAggregationInput = {
@@ -274,6 +277,7 @@ export type TaskActivityCreateInput = {
   createdAt?: Date | string
   task: Prisma.TaskCreateNestedOneWithoutActivitiesInput
   actor: Prisma.ProjectMemberCreateNestedOneWithoutTaskActivitiesInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionCreateNestedManyWithoutSourceActivityInput
 }
 
 export type TaskActivityUncheckedCreateInput = {
@@ -285,6 +289,7 @@ export type TaskActivityUncheckedCreateInput = {
   type: $Enums.TaskActivityType
   message: string
   createdAt?: Date | string
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUncheckedCreateNestedManyWithoutSourceActivityInput
 }
 
 export type TaskActivityUpdateInput = {
@@ -294,6 +299,7 @@ export type TaskActivityUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   task?: Prisma.TaskUpdateOneRequiredWithoutActivitiesNestedInput
   actor?: Prisma.ProjectMemberUpdateOneRequiredWithoutTaskActivitiesNestedInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUpdateManyWithoutSourceActivityNestedInput
 }
 
 export type TaskActivityUncheckedUpdateInput = {
@@ -305,6 +311,7 @@ export type TaskActivityUncheckedUpdateInput = {
   type?: Prisma.EnumTaskActivityTypeFieldUpdateOperationsInput | $Enums.TaskActivityType
   message?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUncheckedUpdateManyWithoutSourceActivityNestedInput
 }
 
 export type TaskActivityCreateManyInput = {
@@ -377,6 +384,11 @@ export type TaskActivityMinOrderByAggregateInput = {
   type?: Prisma.SortOrder
   message?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+}
+
+export type TaskActivityNullableScalarRelationFilter = {
+  is?: Prisma.TaskActivityWhereInput | null
+  isNot?: Prisma.TaskActivityWhereInput | null
 }
 
 export type TaskActivityCreateNestedManyWithoutActorInput = {
@@ -467,12 +479,29 @@ export type EnumTaskActivityTypeFieldUpdateOperationsInput = {
   set?: $Enums.TaskActivityType
 }
 
+export type TaskActivityCreateNestedOneWithoutAutomationExecutionsInput = {
+  create?: Prisma.XOR<Prisma.TaskActivityCreateWithoutAutomationExecutionsInput, Prisma.TaskActivityUncheckedCreateWithoutAutomationExecutionsInput>
+  connectOrCreate?: Prisma.TaskActivityCreateOrConnectWithoutAutomationExecutionsInput
+  connect?: Prisma.TaskActivityWhereUniqueInput
+}
+
+export type TaskActivityUpdateOneWithoutAutomationExecutionsNestedInput = {
+  create?: Prisma.XOR<Prisma.TaskActivityCreateWithoutAutomationExecutionsInput, Prisma.TaskActivityUncheckedCreateWithoutAutomationExecutionsInput>
+  connectOrCreate?: Prisma.TaskActivityCreateOrConnectWithoutAutomationExecutionsInput
+  upsert?: Prisma.TaskActivityUpsertWithoutAutomationExecutionsInput
+  disconnect?: Prisma.TaskActivityWhereInput | boolean
+  delete?: Prisma.TaskActivityWhereInput | boolean
+  connect?: Prisma.TaskActivityWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TaskActivityUpdateToOneWithWhereWithoutAutomationExecutionsInput, Prisma.TaskActivityUpdateWithoutAutomationExecutionsInput>, Prisma.TaskActivityUncheckedUpdateWithoutAutomationExecutionsInput>
+}
+
 export type TaskActivityCreateWithoutActorInput = {
   id?: string
   type: $Enums.TaskActivityType
   message: string
   createdAt?: Date | string
   task: Prisma.TaskCreateNestedOneWithoutActivitiesInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionCreateNestedManyWithoutSourceActivityInput
 }
 
 export type TaskActivityUncheckedCreateWithoutActorInput = {
@@ -481,6 +510,7 @@ export type TaskActivityUncheckedCreateWithoutActorInput = {
   type: $Enums.TaskActivityType
   message: string
   createdAt?: Date | string
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUncheckedCreateNestedManyWithoutSourceActivityInput
 }
 
 export type TaskActivityCreateOrConnectWithoutActorInput = {
@@ -529,6 +559,7 @@ export type TaskActivityCreateWithoutTaskInput = {
   message: string
   createdAt?: Date | string
   actor: Prisma.ProjectMemberCreateNestedOneWithoutTaskActivitiesInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionCreateNestedManyWithoutSourceActivityInput
 }
 
 export type TaskActivityUncheckedCreateWithoutTaskInput = {
@@ -537,6 +568,7 @@ export type TaskActivityUncheckedCreateWithoutTaskInput = {
   type: $Enums.TaskActivityType
   message: string
   createdAt?: Date | string
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUncheckedCreateNestedManyWithoutSourceActivityInput
 }
 
 export type TaskActivityCreateOrConnectWithoutTaskInput = {
@@ -565,6 +597,62 @@ export type TaskActivityUpdateManyWithWhereWithoutTaskInput = {
   data: Prisma.XOR<Prisma.TaskActivityUpdateManyMutationInput, Prisma.TaskActivityUncheckedUpdateManyWithoutTaskInput>
 }
 
+export type TaskActivityCreateWithoutAutomationExecutionsInput = {
+  id?: string
+  type: $Enums.TaskActivityType
+  message: string
+  createdAt?: Date | string
+  task: Prisma.TaskCreateNestedOneWithoutActivitiesInput
+  actor: Prisma.ProjectMemberCreateNestedOneWithoutTaskActivitiesInput
+}
+
+export type TaskActivityUncheckedCreateWithoutAutomationExecutionsInput = {
+  id?: string
+  organizationId: string
+  projectId: string
+  taskId: string
+  actorId: string
+  type: $Enums.TaskActivityType
+  message: string
+  createdAt?: Date | string
+}
+
+export type TaskActivityCreateOrConnectWithoutAutomationExecutionsInput = {
+  where: Prisma.TaskActivityWhereUniqueInput
+  create: Prisma.XOR<Prisma.TaskActivityCreateWithoutAutomationExecutionsInput, Prisma.TaskActivityUncheckedCreateWithoutAutomationExecutionsInput>
+}
+
+export type TaskActivityUpsertWithoutAutomationExecutionsInput = {
+  update: Prisma.XOR<Prisma.TaskActivityUpdateWithoutAutomationExecutionsInput, Prisma.TaskActivityUncheckedUpdateWithoutAutomationExecutionsInput>
+  create: Prisma.XOR<Prisma.TaskActivityCreateWithoutAutomationExecutionsInput, Prisma.TaskActivityUncheckedCreateWithoutAutomationExecutionsInput>
+  where?: Prisma.TaskActivityWhereInput
+}
+
+export type TaskActivityUpdateToOneWithWhereWithoutAutomationExecutionsInput = {
+  where?: Prisma.TaskActivityWhereInput
+  data: Prisma.XOR<Prisma.TaskActivityUpdateWithoutAutomationExecutionsInput, Prisma.TaskActivityUncheckedUpdateWithoutAutomationExecutionsInput>
+}
+
+export type TaskActivityUpdateWithoutAutomationExecutionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumTaskActivityTypeFieldUpdateOperationsInput | $Enums.TaskActivityType
+  message?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  task?: Prisma.TaskUpdateOneRequiredWithoutActivitiesNestedInput
+  actor?: Prisma.ProjectMemberUpdateOneRequiredWithoutTaskActivitiesNestedInput
+}
+
+export type TaskActivityUncheckedUpdateWithoutAutomationExecutionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  taskId?: Prisma.StringFieldUpdateOperationsInput | string
+  actorId?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumTaskActivityTypeFieldUpdateOperationsInput | $Enums.TaskActivityType
+  message?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type TaskActivityCreateManyActorInput = {
   id?: string
   taskId: string
@@ -579,6 +667,7 @@ export type TaskActivityUpdateWithoutActorInput = {
   message?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   task?: Prisma.TaskUpdateOneRequiredWithoutActivitiesNestedInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUpdateManyWithoutSourceActivityNestedInput
 }
 
 export type TaskActivityUncheckedUpdateWithoutActorInput = {
@@ -587,6 +676,7 @@ export type TaskActivityUncheckedUpdateWithoutActorInput = {
   type?: Prisma.EnumTaskActivityTypeFieldUpdateOperationsInput | $Enums.TaskActivityType
   message?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUncheckedUpdateManyWithoutSourceActivityNestedInput
 }
 
 export type TaskActivityUncheckedUpdateManyWithoutActorInput = {
@@ -611,6 +701,7 @@ export type TaskActivityUpdateWithoutTaskInput = {
   message?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actor?: Prisma.ProjectMemberUpdateOneRequiredWithoutTaskActivitiesNestedInput
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUpdateManyWithoutSourceActivityNestedInput
 }
 
 export type TaskActivityUncheckedUpdateWithoutTaskInput = {
@@ -619,6 +710,7 @@ export type TaskActivityUncheckedUpdateWithoutTaskInput = {
   type?: Prisma.EnumTaskActivityTypeFieldUpdateOperationsInput | $Enums.TaskActivityType
   message?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  automationExecutions?: Prisma.WorkflowAutomationExecutionUncheckedUpdateManyWithoutSourceActivityNestedInput
 }
 
 export type TaskActivityUncheckedUpdateManyWithoutTaskInput = {
@@ -629,6 +721,35 @@ export type TaskActivityUncheckedUpdateManyWithoutTaskInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type TaskActivityCountOutputType
+ */
+
+export type TaskActivityCountOutputType = {
+  automationExecutions: number
+}
+
+export type TaskActivityCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  automationExecutions?: boolean | TaskActivityCountOutputTypeCountAutomationExecutionsArgs
+}
+
+/**
+ * TaskActivityCountOutputType without action
+ */
+export type TaskActivityCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TaskActivityCountOutputType
+   */
+  select?: Prisma.TaskActivityCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * TaskActivityCountOutputType without action
+ */
+export type TaskActivityCountOutputTypeCountAutomationExecutionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WorkflowAutomationExecutionWhereInput
+}
 
 
 export type TaskActivitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -642,6 +763,8 @@ export type TaskActivitySelect<ExtArgs extends runtime.Types.Extensions.Internal
   createdAt?: boolean
   task?: boolean | Prisma.TaskDefaultArgs<ExtArgs>
   actor?: boolean | Prisma.ProjectMemberDefaultArgs<ExtArgs>
+  automationExecutions?: boolean | Prisma.TaskActivity$automationExecutionsArgs<ExtArgs>
+  _count?: boolean | Prisma.TaskActivityCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["taskActivity"]>
 
 export type TaskActivitySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -685,6 +808,8 @@ export type TaskActivityOmit<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type TaskActivityInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   task?: boolean | Prisma.TaskDefaultArgs<ExtArgs>
   actor?: boolean | Prisma.ProjectMemberDefaultArgs<ExtArgs>
+  automationExecutions?: boolean | Prisma.TaskActivity$automationExecutionsArgs<ExtArgs>
+  _count?: boolean | Prisma.TaskActivityCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TaskActivityIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   task?: boolean | Prisma.TaskDefaultArgs<ExtArgs>
@@ -700,6 +825,7 @@ export type $TaskActivityPayload<ExtArgs extends runtime.Types.Extensions.Intern
   objects: {
     task: Prisma.$TaskPayload<ExtArgs>
     actor: Prisma.$ProjectMemberPayload<ExtArgs>
+    automationExecutions: Prisma.$WorkflowAutomationExecutionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1106,6 +1232,7 @@ export interface Prisma__TaskActivityClient<T, Null = never, ExtArgs extends run
   readonly [Symbol.toStringTag]: "PrismaPromise"
   task<T extends Prisma.TaskDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TaskDefaultArgs<ExtArgs>>): Prisma.Prisma__TaskClient<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   actor<T extends Prisma.ProjectMemberDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProjectMemberDefaultArgs<ExtArgs>>): Prisma.Prisma__ProjectMemberClient<runtime.Types.Result.GetResult<Prisma.$ProjectMemberPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  automationExecutions<T extends Prisma.TaskActivity$automationExecutionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TaskActivity$automationExecutionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkflowAutomationExecutionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1541,6 +1668,30 @@ export type TaskActivityDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many TaskActivities to delete.
    */
   limit?: number
+}
+
+/**
+ * TaskActivity.automationExecutions
+ */
+export type TaskActivity$automationExecutionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkflowAutomationExecution
+   */
+  select?: Prisma.WorkflowAutomationExecutionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkflowAutomationExecution
+   */
+  omit?: Prisma.WorkflowAutomationExecutionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkflowAutomationExecutionInclude<ExtArgs> | null
+  where?: Prisma.WorkflowAutomationExecutionWhereInput
+  orderBy?: Prisma.WorkflowAutomationExecutionOrderByWithRelationInput | Prisma.WorkflowAutomationExecutionOrderByWithRelationInput[]
+  cursor?: Prisma.WorkflowAutomationExecutionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WorkflowAutomationExecutionScalarFieldEnum | Prisma.WorkflowAutomationExecutionScalarFieldEnum[]
 }
 
 /**

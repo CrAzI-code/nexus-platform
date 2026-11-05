@@ -60,6 +60,12 @@ export const ModelName = {
   Task: 'Task',
   TaskComment: 'TaskComment',
   TaskActivity: 'TaskActivity',
+  WorkflowAutomation: 'WorkflowAutomation',
+  WorkflowAutomationExecution: 'WorkflowAutomationExecution',
+  ProjectDiscussion: 'ProjectDiscussion',
+  ProjectDiscussionMessage: 'ProjectDiscussionMessage',
+  ProjectDiscussionRead: 'ProjectDiscussionRead',
+  TaskBlocker: 'TaskBlocker',
   FileAttachment: 'FileAttachment',
   TaskFileAttachment: 'TaskFileAttachment',
   Invitation: 'Invitation',
@@ -204,6 +210,106 @@ export const TaskActivityScalarFieldEnum = {
 export type TaskActivityScalarFieldEnum = (typeof TaskActivityScalarFieldEnum)[keyof typeof TaskActivityScalarFieldEnum]
 
 
+export const WorkflowAutomationScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  createdById: 'createdById',
+  name: 'name',
+  trigger: 'trigger',
+  conditionPriority: 'conditionPriority',
+  conditionStatus: 'conditionStatus',
+  conditionAssigneeId: 'conditionAssigneeId',
+  action: 'action',
+  actionValue: 'actionValue',
+  actionAssigneeId: 'actionAssigneeId',
+  enabled: 'enabled',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WorkflowAutomationScalarFieldEnum = (typeof WorkflowAutomationScalarFieldEnum)[keyof typeof WorkflowAutomationScalarFieldEnum]
+
+
+export const WorkflowAutomationExecutionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  ruleId: 'ruleId',
+  taskId: 'taskId',
+  sourceActivityId: 'sourceActivityId',
+  eventKey: 'eventKey',
+  trigger: 'trigger',
+  status: 'status',
+  reason: 'reason',
+  error: 'error',
+  attempt: 'attempt',
+  triggeredAt: 'triggeredAt',
+  completedAt: 'completedAt'
+} as const
+
+export type WorkflowAutomationExecutionScalarFieldEnum = (typeof WorkflowAutomationExecutionScalarFieldEnum)[keyof typeof WorkflowAutomationExecutionScalarFieldEnum]
+
+
+export const ProjectDiscussionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  createdById: 'createdById',
+  title: 'title',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDiscussionScalarFieldEnum = (typeof ProjectDiscussionScalarFieldEnum)[keyof typeof ProjectDiscussionScalarFieldEnum]
+
+
+export const ProjectDiscussionMessageScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  discussionId: 'discussionId',
+  authorId: 'authorId',
+  body: 'body',
+  editedAt: 'editedAt',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDiscussionMessageScalarFieldEnum = (typeof ProjectDiscussionMessageScalarFieldEnum)[keyof typeof ProjectDiscussionMessageScalarFieldEnum]
+
+
+export const ProjectDiscussionReadScalarFieldEnum = {
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  discussionId: 'discussionId',
+  userId: 'userId',
+  lastReadAt: 'lastReadAt',
+  lastReadMessageId: 'lastReadMessageId',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDiscussionReadScalarFieldEnum = (typeof ProjectDiscussionReadScalarFieldEnum)[keyof typeof ProjectDiscussionReadScalarFieldEnum]
+
+
+export const TaskBlockerScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  taskId: 'taskId',
+  reason: 'reason',
+  priorStatus: 'priorStatus',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  resolvedById: 'resolvedById',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type TaskBlockerScalarFieldEnum = (typeof TaskBlockerScalarFieldEnum)[keyof typeof TaskBlockerScalarFieldEnum]
+
+
 export const FileAttachmentScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -213,6 +319,7 @@ export const FileAttachmentScalarFieldEnum = {
   originalName: 'originalName',
   mimeType: 'mimeType',
   sizeBytes: 'sizeBytes',
+  scanStatus: 'scanStatus',
   createdAt: 'createdAt',
   removedAt: 'removedAt'
 } as const

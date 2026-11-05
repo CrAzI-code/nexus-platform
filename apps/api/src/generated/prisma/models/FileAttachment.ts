@@ -43,6 +43,7 @@ export type FileAttachmentMinAggregateOutputType = {
   originalName: string | null
   mimeType: string | null
   sizeBytes: number | null
+  scanStatus: $Enums.FileScanStatus | null
   createdAt: Date | null
   removedAt: Date | null
 }
@@ -56,6 +57,7 @@ export type FileAttachmentMaxAggregateOutputType = {
   originalName: string | null
   mimeType: string | null
   sizeBytes: number | null
+  scanStatus: $Enums.FileScanStatus | null
   createdAt: Date | null
   removedAt: Date | null
 }
@@ -69,6 +71,7 @@ export type FileAttachmentCountAggregateOutputType = {
   originalName: number
   mimeType: number
   sizeBytes: number
+  scanStatus: number
   createdAt: number
   removedAt: number
   _all: number
@@ -92,6 +95,7 @@ export type FileAttachmentMinAggregateInputType = {
   originalName?: true
   mimeType?: true
   sizeBytes?: true
+  scanStatus?: true
   createdAt?: true
   removedAt?: true
 }
@@ -105,6 +109,7 @@ export type FileAttachmentMaxAggregateInputType = {
   originalName?: true
   mimeType?: true
   sizeBytes?: true
+  scanStatus?: true
   createdAt?: true
   removedAt?: true
 }
@@ -118,6 +123,7 @@ export type FileAttachmentCountAggregateInputType = {
   originalName?: true
   mimeType?: true
   sizeBytes?: true
+  scanStatus?: true
   createdAt?: true
   removedAt?: true
   _all?: true
@@ -218,6 +224,7 @@ export type FileAttachmentGroupByOutputType = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus: $Enums.FileScanStatus
   createdAt: Date
   removedAt: Date | null
   _count: FileAttachmentCountAggregateOutputType | null
@@ -254,6 +261,7 @@ export type FileAttachmentWhereInput = {
   originalName?: Prisma.StringFilter<"FileAttachment"> | string
   mimeType?: Prisma.StringFilter<"FileAttachment"> | string
   sizeBytes?: Prisma.IntFilter<"FileAttachment"> | number
+  scanStatus?: Prisma.EnumFileScanStatusFilter<"FileAttachment"> | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFilter<"FileAttachment"> | Date | string
   removedAt?: Prisma.DateTimeNullableFilter<"FileAttachment"> | Date | string | null
   project?: Prisma.XOR<Prisma.ProjectScalarRelationFilter, Prisma.ProjectWhereInput>
@@ -270,6 +278,7 @@ export type FileAttachmentOrderByWithRelationInput = {
   originalName?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
   sizeBytes?: Prisma.SortOrder
+  scanStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   removedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   project?: Prisma.ProjectOrderByWithRelationInput
@@ -290,6 +299,7 @@ export type FileAttachmentWhereUniqueInput = Prisma.AtLeast<{
   originalName?: Prisma.StringFilter<"FileAttachment"> | string
   mimeType?: Prisma.StringFilter<"FileAttachment"> | string
   sizeBytes?: Prisma.IntFilter<"FileAttachment"> | number
+  scanStatus?: Prisma.EnumFileScanStatusFilter<"FileAttachment"> | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFilter<"FileAttachment"> | Date | string
   removedAt?: Prisma.DateTimeNullableFilter<"FileAttachment"> | Date | string | null
   project?: Prisma.XOR<Prisma.ProjectScalarRelationFilter, Prisma.ProjectWhereInput>
@@ -306,6 +316,7 @@ export type FileAttachmentOrderByWithAggregationInput = {
   originalName?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
   sizeBytes?: Prisma.SortOrder
+  scanStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   removedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.FileAttachmentCountOrderByAggregateInput
@@ -327,6 +338,7 @@ export type FileAttachmentScalarWhereWithAggregatesInput = {
   originalName?: Prisma.StringWithAggregatesFilter<"FileAttachment"> | string
   mimeType?: Prisma.StringWithAggregatesFilter<"FileAttachment"> | string
   sizeBytes?: Prisma.IntWithAggregatesFilter<"FileAttachment"> | number
+  scanStatus?: Prisma.EnumFileScanStatusWithAggregatesFilter<"FileAttachment"> | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"FileAttachment"> | Date | string
   removedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"FileAttachment"> | Date | string | null
 }
@@ -337,6 +349,7 @@ export type FileAttachmentCreateInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   project: Prisma.ProjectCreateNestedOneWithoutFilesInput
@@ -353,6 +366,7 @@ export type FileAttachmentUncheckedCreateInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   taskAttachment?: Prisma.TaskFileAttachmentUncheckedCreateNestedOneWithoutFileInput
@@ -364,6 +378,7 @@ export type FileAttachmentUpdateInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   project?: Prisma.ProjectUpdateOneRequiredWithoutFilesNestedInput
@@ -380,6 +395,7 @@ export type FileAttachmentUncheckedUpdateInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   taskAttachment?: Prisma.TaskFileAttachmentUncheckedUpdateOneWithoutFileNestedInput
@@ -394,6 +410,7 @@ export type FileAttachmentCreateManyInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
 }
@@ -404,6 +421,7 @@ export type FileAttachmentUpdateManyMutationInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -417,6 +435,7 @@ export type FileAttachmentUncheckedUpdateManyInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -446,6 +465,7 @@ export type FileAttachmentCountOrderByAggregateInput = {
   originalName?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
   sizeBytes?: Prisma.SortOrder
+  scanStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   removedAt?: Prisma.SortOrder
 }
@@ -463,6 +483,7 @@ export type FileAttachmentMaxOrderByAggregateInput = {
   originalName?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
   sizeBytes?: Prisma.SortOrder
+  scanStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   removedAt?: Prisma.SortOrder
 }
@@ -476,6 +497,7 @@ export type FileAttachmentMinOrderByAggregateInput = {
   originalName?: Prisma.SortOrder
   mimeType?: Prisma.SortOrder
   sizeBytes?: Prisma.SortOrder
+  scanStatus?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   removedAt?: Prisma.SortOrder
 }
@@ -573,12 +595,8 @@ export type FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput = {
   deleteMany?: Prisma.FileAttachmentScalarWhereInput | Prisma.FileAttachmentScalarWhereInput[]
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
+export type EnumFileScanStatusFieldUpdateOperationsInput = {
+  set?: $Enums.FileScanStatus
 }
 
 export type FileAttachmentCreateNestedOneWithoutTaskAttachmentInput = {
@@ -601,6 +619,7 @@ export type FileAttachmentCreateWithoutUploaderMembershipInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   project: Prisma.ProjectCreateNestedOneWithoutFilesInput
@@ -614,6 +633,7 @@ export type FileAttachmentUncheckedCreateWithoutUploaderMembershipInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   taskAttachment?: Prisma.TaskFileAttachmentUncheckedCreateNestedOneWithoutFileInput
@@ -657,6 +677,7 @@ export type FileAttachmentScalarWhereInput = {
   originalName?: Prisma.StringFilter<"FileAttachment"> | string
   mimeType?: Prisma.StringFilter<"FileAttachment"> | string
   sizeBytes?: Prisma.IntFilter<"FileAttachment"> | number
+  scanStatus?: Prisma.EnumFileScanStatusFilter<"FileAttachment"> | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFilter<"FileAttachment"> | Date | string
   removedAt?: Prisma.DateTimeNullableFilter<"FileAttachment"> | Date | string | null
 }
@@ -667,6 +688,7 @@ export type FileAttachmentCreateWithoutProjectInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   uploaderMembership: Prisma.OrganizationMembershipCreateNestedOneWithoutUploadedFilesInput
@@ -680,6 +702,7 @@ export type FileAttachmentUncheckedCreateWithoutProjectInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   taskAttachment?: Prisma.TaskFileAttachmentUncheckedCreateNestedOneWithoutFileInput
@@ -717,6 +740,7 @@ export type FileAttachmentCreateWithoutTaskAttachmentInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
   project: Prisma.ProjectCreateNestedOneWithoutFilesInput
@@ -732,6 +756,7 @@ export type FileAttachmentUncheckedCreateWithoutTaskAttachmentInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
 }
@@ -758,6 +783,7 @@ export type FileAttachmentUpdateWithoutTaskAttachmentInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   project?: Prisma.ProjectUpdateOneRequiredWithoutFilesNestedInput
@@ -773,6 +799,7 @@ export type FileAttachmentUncheckedUpdateWithoutTaskAttachmentInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -784,6 +811,7 @@ export type FileAttachmentCreateManyUploaderMembershipInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
 }
@@ -794,6 +822,7 @@ export type FileAttachmentUpdateWithoutUploaderMembershipInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   project?: Prisma.ProjectUpdateOneRequiredWithoutFilesNestedInput
@@ -807,6 +836,7 @@ export type FileAttachmentUncheckedUpdateWithoutUploaderMembershipInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   taskAttachment?: Prisma.TaskFileAttachmentUncheckedUpdateOneWithoutFileNestedInput
@@ -819,6 +849,7 @@ export type FileAttachmentUncheckedUpdateManyWithoutUploaderMembershipInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -830,6 +861,7 @@ export type FileAttachmentCreateManyProjectInput = {
   originalName: string
   mimeType: string
   sizeBytes: number
+  scanStatus?: $Enums.FileScanStatus
   createdAt?: Date | string
   removedAt?: Date | string | null
 }
@@ -840,6 +872,7 @@ export type FileAttachmentUpdateWithoutProjectInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   uploaderMembership?: Prisma.OrganizationMembershipUpdateOneRequiredWithoutUploadedFilesNestedInput
@@ -853,6 +886,7 @@ export type FileAttachmentUncheckedUpdateWithoutProjectInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   taskAttachment?: Prisma.TaskFileAttachmentUncheckedUpdateOneWithoutFileNestedInput
@@ -865,6 +899,7 @@ export type FileAttachmentUncheckedUpdateManyWithoutProjectInput = {
   originalName?: Prisma.StringFieldUpdateOperationsInput | string
   mimeType?: Prisma.StringFieldUpdateOperationsInput | string
   sizeBytes?: Prisma.IntFieldUpdateOperationsInput | number
+  scanStatus?: Prisma.EnumFileScanStatusFieldUpdateOperationsInput | $Enums.FileScanStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   removedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
@@ -880,6 +915,7 @@ export type FileAttachmentSelect<ExtArgs extends runtime.Types.Extensions.Intern
   originalName?: boolean
   mimeType?: boolean
   sizeBytes?: boolean
+  scanStatus?: boolean
   createdAt?: boolean
   removedAt?: boolean
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
@@ -896,6 +932,7 @@ export type FileAttachmentSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   originalName?: boolean
   mimeType?: boolean
   sizeBytes?: boolean
+  scanStatus?: boolean
   createdAt?: boolean
   removedAt?: boolean
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
@@ -911,6 +948,7 @@ export type FileAttachmentSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   originalName?: boolean
   mimeType?: boolean
   sizeBytes?: boolean
+  scanStatus?: boolean
   createdAt?: boolean
   removedAt?: boolean
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
@@ -926,11 +964,12 @@ export type FileAttachmentSelectScalar = {
   originalName?: boolean
   mimeType?: boolean
   sizeBytes?: boolean
+  scanStatus?: boolean
   createdAt?: boolean
   removedAt?: boolean
 }
 
-export type FileAttachmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "projectId" | "uploadedById" | "storageKey" | "originalName" | "mimeType" | "sizeBytes" | "createdAt" | "removedAt", ExtArgs["result"]["fileAttachment"]>
+export type FileAttachmentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "organizationId" | "projectId" | "uploadedById" | "storageKey" | "originalName" | "mimeType" | "sizeBytes" | "scanStatus" | "createdAt" | "removedAt", ExtArgs["result"]["fileAttachment"]>
 export type FileAttachmentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
   uploaderMembership?: boolean | Prisma.OrganizationMembershipDefaultArgs<ExtArgs>
@@ -961,6 +1000,7 @@ export type $FileAttachmentPayload<ExtArgs extends runtime.Types.Extensions.Inte
     originalName: string
     mimeType: string
     sizeBytes: number
+    scanStatus: $Enums.FileScanStatus
     createdAt: Date
     removedAt: Date | null
   }, ExtArgs["result"]["fileAttachment"]>
@@ -1397,6 +1437,7 @@ export interface FileAttachmentFieldRefs {
   readonly originalName: Prisma.FieldRef<"FileAttachment", 'String'>
   readonly mimeType: Prisma.FieldRef<"FileAttachment", 'String'>
   readonly sizeBytes: Prisma.FieldRef<"FileAttachment", 'Int'>
+  readonly scanStatus: Prisma.FieldRef<"FileAttachment", 'FileScanStatus'>
   readonly createdAt: Prisma.FieldRef<"FileAttachment", 'DateTime'>
   readonly removedAt: Prisma.FieldRef<"FileAttachment", 'DateTime'>
 }

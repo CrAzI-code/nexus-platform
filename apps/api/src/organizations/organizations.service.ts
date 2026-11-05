@@ -1,4 +1,9 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client.js';
 import type { OrganizationRole } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma.service.js';
@@ -24,8 +29,7 @@ export class OrganizationsService {
     const baseSlug = this.createSlug(name);
 
     for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
-      const slug =
-        attempt === 1 ? baseSlug : `${baseSlug}-${attempt}`;
+      const slug = attempt === 1 ? baseSlug : `${baseSlug}-${attempt}`;
 
       try {
         return await this.prisma.$transaction(async (transaction) => {
@@ -33,15 +37,14 @@ export class OrganizationsService {
             data: { name, slug },
             select: { id: true, name: true, slug: true },
           });
-          const membership =
-            await transaction.organizationMembership.create({
-              data: {
-                organizationId: organization.id,
-                userId,
-                role: 'OWNER',
-              },
-              select: { role: true },
-            });
+          const membership = await transaction.organizationMembership.create({
+            data: {
+              organizationId: organization.id,
+              userId,
+              role: 'OWNER',
+            },
+            select: { role: true },
+          });
 
           return { ...organization, role: membership.role };
         });
@@ -57,9 +60,7 @@ export class OrganizationsService {
     );
   }
 
-  async listForUser(
-    userId: string,
-  ): Promise<OrganizationMembershipResponse[]> {
+  async listForUser(userId: string): Promise<OrganizationMembershipResponse[]> {
     const memberships = await this.prisma.organizationMembership.findMany({
       where: {
         userId,
@@ -79,6 +80,37 @@ export class OrganizationsService {
       ...organization,
       role,
     }));
+  }
+
+  async updateName(
+    organizationId: string,
+    userId: string,
+    name: string,
+  ): Promise<OrganizationMembershipResponse> {
+    return this.prisma.$transaction(async (transaction) => {
+      const membership = await transaction.organizationMembership.findFirst({
+        where: {
+          organizationId,
+          userId,
+          status: 'ACTIVE',
+          organization: { status: 'ACTIVE' },
+        },
+        select: { role: true },
+      });
+      if (!membership) throw new NotFoundException('Organization not found.');
+      if (membership.role !== 'OWNER' && membership.role !== 'ADMIN') {
+        throw new ForbiddenException(
+          'Only organization Owners and Admins can update the organization profile.',
+        );
+      }
+
+      const organization = await transaction.organization.update({
+        where: { id: organizationId, status: 'ACTIVE' },
+        data: { name },
+        select: { id: true, name: true, slug: true },
+      });
+      return { ...organization, role: membership.role };
+    });
   }
 
   private createSlug(name: string): string {

@@ -39,6 +39,11 @@ export type AcceptedOrganizationInvitation = {
   role: OrganizationRole;
 };
 
+export type DeclinedOrganizationInvitation = {
+  organizationId: string;
+  status: "DECLINED";
+};
+
 export type InvitationAcceptanceDetails = {
   id: string;
   organizationName: string;
@@ -125,10 +130,10 @@ async function responseError(response: Response): Promise<Error> {
     }
     if (message.includes("Verify the email address")) {
       return new Error(
-        "Verify the primary email on your NEXUS account, then try accepting the invitation again.",
+        "Verify the primary email on your NEXUS account, then try again.",
       );
     }
-    return new Error("You don’t have permission to accept this invitation.");
+    return new Error("You don’t have permission to respond to this invitation.");
   }
   if (response.status === 404 && message.includes("Invitation not found")) {
     return new Error("This invitation link is invalid or no longer available.");
@@ -142,6 +147,9 @@ async function responseError(response: Response): Promise<Error> {
     }
     if (message.includes("already been used")) {
       return new Error("This invitation has already been accepted.");
+    }
+    if (message.includes("already been declined")) {
+      return new Error("This invitation has already been declined.");
     }
     if (message.includes("active invitation already exists")) {
       return new Error("An active invitation already exists for this email.");
@@ -176,7 +184,7 @@ async function responseError(response: Response): Promise<Error> {
   }
   if (response.status >= 500) {
     return new Error(
-      "NEXUS couldn’t accept the invitation right now. It hasn’t been used; please try again shortly.",
+      "NEXUS couldn’t respond to the invitation right now. It hasn’t been used; please try again shortly.",
     );
   }
   return new Error("We couldn’t complete that request. Please try again.");
@@ -283,6 +291,34 @@ export async function revokeOrganizationInvitation(
   return result;
 }
 
+export async function resendOrganizationInvitation(
+  token: string,
+  organizationId: string,
+  invitationId: string,
+): Promise<CreatedOrganizationInvitation> {
+  const result = await teamRequest(
+    token,
+    `${organizationPath(organizationId)}/invitations/${encodeURIComponent(invitationId)}/resend`,
+    { method: "POST" },
+  );
+  if (
+    !isRecord(result) ||
+    !isInvitation(result.invitation) ||
+    (result.emailDeliveryStatus !== "sent" &&
+      result.emailDeliveryStatus !== "unavailable" &&
+      result.emailDeliveryStatus !== "failed") ||
+    typeof result.invitationToken !== "string" ||
+    !/^[a-f0-9]{64}$/iu.test(result.invitationToken)
+  ) {
+    throw new Error("The server returned an unexpected invitation response.");
+  }
+  return {
+    invitation: result.invitation,
+    invitationToken: result.invitationToken,
+    emailDeliveryStatus: result.emailDeliveryStatus,
+  };
+}
+
 export async function updateOrganizationMemberRole(
   token: string,
   organizationId: string,
@@ -380,4 +416,43 @@ export async function acceptOrganizationInvitationById(
     organizationName: result.organizationName,
     role: result.role,
   };
+}
+
+function isDeclinedInvitation(
+  value: unknown,
+): value is DeclinedOrganizationInvitation {
+  return (
+    isRecord(value) &&
+    typeof value.organizationId === "string" &&
+    value.status === "DECLINED"
+  );
+}
+
+export async function declineOrganizationInvitation(
+  token: string,
+  invitationToken: string,
+): Promise<DeclinedOrganizationInvitation> {
+  const result = await teamRequest(token, "/invitations/decline", {
+    method: "POST",
+    body: JSON.stringify({ token: invitationToken }),
+  });
+  if (!isDeclinedInvitation(result)) {
+    throw new Error("The server returned an unexpected decline response.");
+  }
+  return result;
+}
+
+export async function declineOrganizationInvitationById(
+  token: string,
+  invitationId: string,
+): Promise<DeclinedOrganizationInvitation> {
+  const result = await teamRequest(
+    token,
+    `/invitations/${encodeURIComponent(invitationId)}/decline`,
+    { method: "POST" },
+  );
+  if (!isDeclinedInvitation(result)) {
+    throw new Error("The server returned an unexpected decline response.");
+  }
+  return result;
 }

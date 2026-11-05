@@ -8,6 +8,7 @@ import type { TaskActivityType } from '../generated/prisma/client.js';
 import type { NewNotification } from '../notifications/notifications.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma.service.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { TasksService } from './tasks.service.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -30,12 +31,14 @@ const taskRow = {
   },
   assignee: null,
   _count: { comments: 0 },
+  blockers: [],
 };
 
 const taskDetails = {
   ...taskRow,
   comments: [],
   activities: [],
+  blockers: [],
 };
 
 function detailsWithActivity(
@@ -74,6 +77,11 @@ describe('TasksService', () => {
     },
     taskComment: { create: vi.fn(), findMany: vi.fn() },
     taskActivity: { create: vi.fn() },
+    taskBlocker: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+    },
     auditLog: { create: vi.fn() },
     notification: { createMany: vi.fn() },
   };
@@ -115,6 +123,9 @@ describe('TasksService', () => {
     transaction.taskComment.create.mockResolvedValue({ id: 'comment-id' });
     transaction.taskComment.findMany.mockResolvedValue([]);
     transaction.taskActivity.create.mockResolvedValue({ id: 'activity-id' });
+    transaction.taskBlocker.findFirst.mockResolvedValue(null);
+    transaction.taskBlocker.create.mockResolvedValue({ id: 'blocker-id' });
+    transaction.taskBlocker.updateMany.mockResolvedValue({ count: 1 });
     transaction.auditLog.create.mockResolvedValue({ id: 'audit-log-id' });
     transaction.notification.createMany.mockResolvedValue({ count: 1 });
     prisma.$transaction.mockImplementation(
@@ -168,6 +179,49 @@ describe('TasksService', () => {
     expect(transaction.taskActivity.create).toHaveBeenCalledTimes(1);
   });
 
+  it('notifies the other task participants when an active task due date changes', async () => {
+    transaction.task.findFirst
+      .mockResolvedValueOnce({
+        ...taskRow,
+        creator: {
+          userId: 'creator-id',
+          membership: { user: { name: 'Task Creator' } },
+        },
+        assignee: {
+          userId: 'assignee-id',
+          membership: { user: { name: 'Task Assignee' } },
+        },
+      })
+      .mockResolvedValueOnce(taskDetails);
+
+    await service.update(
+      'organization-id',
+      'project-id',
+      'task-id',
+      'verified-user-id',
+      { dueAt: '2026-12-10' },
+    );
+
+    expect(transaction.notification.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            recipientId: 'creator-id',
+            type: 'TASK_DUE_DATE',
+            resourceId: 'task-id',
+            message: 'A task you follow is due on 2026-12-10.',
+          }),
+          expect.objectContaining({
+            recipientId: 'assignee-id',
+            type: 'TASK_DUE_DATE',
+            resourceId: 'task-id',
+          }),
+        ],
+        skipDuplicates: true,
+      }),
+    );
+  });
+
   it('rolls back task creation if its history record cannot be written', async () => {
     const failure = new Error('Activity insert failed');
     transaction.taskActivity.create.mockRejectedValue(failure);
@@ -191,7 +245,171 @@ describe('TasksService', () => {
     );
   });
 
+  it('loads task details with blocker fields and organization-scoped authorization', async () => {
+    const createdAt = new Date('2026-01-02T00:00:00Z');
+    transaction.task.findFirst.mockResolvedValue({
+      ...taskDetails,
+      blockers: [
+        {
+          id: 'blocker-id',
+          reason: 'Waiting on a review.',
+          createdById: 'verified-user-id',
+          createdAt,
+          resolvedById: null,
+          resolvedAt: null,
+          creator: { name: 'Jordan Wells' },
+          resolver: null,
+        },
+      ],
+    });
+
+    await expect(
+      service.get(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'verified-user-id',
+      ),
+    ).resolves.toMatchObject({
+      id: 'task-id',
+      activeBlocker: {
+        id: 'blocker-id',
+        reason: 'Waiting on a review.',
+        createdByName: 'Jordan Wells',
+      },
+      blockerHistory: [
+        {
+          id: 'blocker-id',
+          reason: 'Waiting on a review.',
+          createdAt,
+          resolvedById: null,
+          resolvedAt: null,
+        },
+      ],
+    });
+
+    expect(transaction.organizationMembership.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: 'organization-id',
+          userId: 'verified-user-id',
+          status: 'ACTIVE',
+        }),
+      }),
+    );
+    expect(transaction.task.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'task-id',
+          organizationId: 'organization-id',
+          projectId: 'project-id',
+        },
+        select: expect.objectContaining({
+          blockers: expect.objectContaining({
+            select: expect.objectContaining({
+              resolvedById: true,
+              resolvedAt: true,
+              creator: expect.any(Object),
+              resolver: expect.any(Object),
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('returns an empty blocker history for existing tasks without blockers', async () => {
+    await expect(
+      service.get(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'verified-user-id',
+      ),
+    ).resolves.toMatchObject({
+      id: 'task-id',
+      activeBlocker: null,
+      blockerHistory: [],
+    });
+
+    expect(transaction.task.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'task-id',
+          organizationId: 'organization-id',
+          projectId: 'project-id',
+        },
+        select: expect.objectContaining({
+          blockers: expect.objectContaining({
+            select: expect.objectContaining({
+              id: true,
+              reason: true,
+              createdById: true,
+              resolvedById: true,
+              resolvedAt: true,
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it.each(['OWNER', 'ADMIN'] as const)(
+    'allows organization %s to read tasks for an unassigned project without granting mutation capabilities',
+    async (role) => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+      transaction.projectMember.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.list('organization-id', 'project-id', 'verified-user-id'),
+      ).resolves.toMatchObject([
+        { id: 'task-id', canManage: false, canAssignOthers: false },
+      ]);
+      await expect(
+        service.get(
+          'organization-id',
+          'project-id',
+          'task-id',
+          'verified-user-id',
+        ),
+      ).resolves.toMatchObject({
+        id: 'task-id',
+        canManage: false,
+        canAssignOthers: false,
+        canParticipate: false,
+      });
+
+      expect(transaction.project.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { organizationId: 'organization-id', id: 'project-id' },
+        }),
+      );
+    },
+  );
+
+  it('preserves task mutation capabilities for organization admins who are project members', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'ADMIN',
+    });
+
+    await expect(
+      service.get(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'verified-user-id',
+      ),
+    ).resolves.toMatchObject({
+      canManage: true,
+      canAssignOthers: true,
+      canParticipate: true,
+    });
+  });
+
   it('hides tasks from users who are not active members of the project', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'MEMBER',
+    });
     transaction.projectMember.findFirst.mockResolvedValue(null);
 
     await expect(
@@ -204,6 +422,50 @@ describe('TasksService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(transaction.task.findFirst).not.toHaveBeenCalled();
   });
+
+  it('denies organization admins access when the project is not in the requested organization', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'ADMIN',
+    });
+    transaction.project.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.list(
+        'another-organization',
+        'another-project',
+        'verified-user-id',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(transaction.project.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'another-organization',
+          id: 'another-project',
+        },
+      }),
+    );
+    expect(transaction.task.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['OWNER', 'ADMIN'] as const)(
+    'does not grant organization %s task editing without project membership',
+    async (role) => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+      transaction.projectMember.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update(
+          'organization-id',
+          'project-id',
+          'task-id',
+          'verified-user-id',
+          { title: 'Unauthorized edit' },
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(transaction.task.updateMany).not.toHaveBeenCalled();
+    },
+  );
 
   it('scopes task lookup by organization, project, and task ID', async () => {
     transaction.task.findFirst.mockResolvedValue(null);
@@ -445,6 +707,19 @@ describe('TasksService', () => {
       { status: 'BLOCKED', blockerReason: 'Waiting for approval' },
     );
 
+    expect(transaction.taskBlocker.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          organizationId: 'organization-id',
+          projectId: 'project-id',
+          taskId: 'task-id',
+          reason: 'Waiting for approval',
+          priorStatus: 'TODO',
+          createdById: 'verified-user-id',
+        },
+        select: { id: true },
+      }),
+    );
     expect(transaction.task.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'BLOCKED' } }),
     );
@@ -452,8 +727,16 @@ describe('TasksService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           actorId: 'verified-user-id',
-          type: 'STATUS_CHANGED',
+          type: 'BLOCKER_CREATED',
           message: 'Marked this task as blocked: Waiting for approval',
+        }),
+      }),
+    );
+    expect(transaction.taskActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'STATUS_CHANGED',
+          message: 'Changed status from TODO to BLOCKED.',
         }),
       }),
     );
@@ -462,13 +745,346 @@ describe('TasksService', () => {
         data: expect.objectContaining({
           organizationId: 'organization-id',
           actorId: 'verified-user-id',
-          action: 'TASK_STATUS_CHANGED',
+          action: 'TASK_BLOCKED',
           targetId: 'task-id',
-          before: { status: 'TODO' },
-          after: { status: 'BLOCKED' },
+          after: expect.objectContaining({
+            reason: 'Waiting for approval',
+            status: 'BLOCKED',
+          }),
         }),
       }),
     );
+  });
+
+  it('persists blocker creation, activity, audit, and notifications atomically', async () => {
+    const createdAt = new Date('2026-01-02T00:00:00Z');
+    transaction.task.findFirst
+      .mockResolvedValueOnce(taskRow)
+      .mockResolvedValueOnce({
+        ...taskDetails,
+        status: 'BLOCKED',
+        blockers: [
+          {
+            id: 'blocker-id',
+            reason: 'Waiting on vendor access.',
+            createdById: 'verified-user-id',
+            createdAt,
+            resolvedById: null,
+            resolvedAt: null,
+            creator: { name: 'Jordan Wells' },
+            resolver: null,
+          },
+        ],
+      });
+    transaction.projectMember.findMany.mockResolvedValue([
+      { userId: 'verified-user-id' },
+      { userId: 'other-member-id' },
+      { userId: 'another-member-id' },
+    ]);
+
+    const created = await service.createBlocker(
+      'organization-id',
+      'project-id',
+      'task-id',
+      'verified-user-id',
+      { reason: 'Waiting on vendor access.' },
+    );
+    expect(created).toMatchObject({
+      status: 'BLOCKED',
+      activeBlocker: {
+        id: 'blocker-id',
+        reason: 'Waiting on vendor access.',
+        createdByName: 'Jordan Wells',
+      },
+      blockerHistory: [
+        {
+          id: 'blocker-id',
+          reason: 'Waiting on vendor access.',
+          resolvedAt: null,
+        },
+      ],
+    });
+
+    expect(transaction.taskBlocker.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'organization-id',
+          projectId: 'project-id',
+          taskId: 'task-id',
+          reason: 'Waiting on vendor access.',
+          priorStatus: 'TODO',
+          createdById: 'verified-user-id',
+        }),
+      }),
+    );
+    expect(transaction.taskActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ type: 'BLOCKER_CREATED' }),
+      }),
+    );
+    expect(transaction.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: 'TASK_BLOCKED' }),
+      }),
+    );
+    expect(transaction.notification.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            recipientId: 'other-member-id',
+            type: 'TASK_BLOCKED',
+            message: 'A task was blocked.',
+            resourceId: 'task-id',
+          }),
+          expect.objectContaining({
+            recipientId: 'another-member-id',
+            type: 'TASK_BLOCKED',
+            resourceId: 'task-id',
+          }),
+        ],
+        skipDuplicates: true,
+      }),
+    );
+  });
+
+  it('rejects duplicate active blockers without changing task status', async () => {
+    transaction.taskBlocker.findFirst.mockResolvedValue({ id: 'existing-id' });
+
+    await expect(
+      service.createBlocker(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'verified-user-id',
+        { reason: 'Another issue.' },
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(transaction.taskBlocker.create).not.toHaveBeenCalled();
+    expect(transaction.task.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['OWNER', 'ADMIN', 'MEMBER'] as const)(
+    'denies blocker creation to organization %s without active project membership',
+    async (role) => {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+      transaction.projectMember.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createBlocker(
+          'organization-id',
+          'project-id',
+          'task-id',
+          'verified-user-id',
+          { reason: 'Cannot access this project.' },
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(transaction.taskBlocker.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not create blockers for tasks outside the requested organization and project', async () => {
+    transaction.projectMember.findFirst.mockResolvedValue({
+      id: 'project-member-id',
+    });
+    transaction.task.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createBlocker(
+        'another-organization',
+        'another-project',
+        'task-id',
+        'verified-user-id',
+        { reason: 'Cannot cross organizations.' },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transaction.task.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'task-id',
+          organizationId: 'another-organization',
+          projectId: 'another-project',
+        },
+      }),
+    );
+    expect(transaction.taskBlocker.create).not.toHaveBeenCalled();
+  });
+
+  it('turns concurrent duplicate-blocker constraint failures into conflicts', async () => {
+    transaction.taskBlocker.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint conflict', {
+        code: 'P2002',
+        clientVersion: 'test',
+        meta: { target: ['organization_id', 'project_id', 'task_id'] },
+      }),
+    );
+
+    await expect(
+      service.createBlocker(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'verified-user-id',
+        { reason: 'Concurrent blocker.' },
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('resolves an active blocker and records its resolver and resolution time', async () => {
+    const resolvedAt = new Date('2026-01-03T00:00:00Z');
+    transaction.task.findFirst
+      .mockResolvedValueOnce({
+        ...taskRow,
+        status: 'BLOCKED',
+      })
+      .mockResolvedValueOnce({
+        ...taskDetails,
+        status: 'IN_PROGRESS',
+        blockers: [
+          {
+            id: 'blocker-id',
+            reason: 'Waiting on vendor access.',
+            createdById: 'other-member-id',
+            createdAt: new Date('2026-01-02T00:00:00Z'),
+            resolvedById: 'verified-user-id',
+            resolvedAt,
+            creator: { name: 'Other Member' },
+            resolver: { name: 'Jordan Wells' },
+          },
+        ],
+      });
+    transaction.taskBlocker.findFirst.mockResolvedValue({
+      id: 'blocker-id',
+      reason: 'Waiting on vendor access.',
+      priorStatus: 'IN_PROGRESS',
+    });
+    transaction.projectMember.findMany.mockResolvedValue([
+      { userId: 'other-member-id' },
+    ]);
+
+    const resolved = await service.resolveBlocker(
+      'organization-id',
+      'project-id',
+      'task-id',
+      'blocker-id',
+      'verified-user-id',
+    );
+    expect(resolved).toMatchObject({
+      status: 'IN_PROGRESS',
+      activeBlocker: null,
+      blockerHistory: [
+        {
+          id: 'blocker-id',
+          resolvedById: 'verified-user-id',
+          resolvedByName: 'Jordan Wells',
+          resolvedAt,
+        },
+      ],
+    });
+
+    expect(transaction.taskBlocker.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'blocker-id',
+        organizationId: 'organization-id',
+        projectId: 'project-id',
+        taskId: 'task-id',
+        resolvedAt: null,
+      },
+      data: {
+        resolvedById: 'verified-user-id',
+        resolvedAt: expect.any(Date),
+      },
+    });
+    expect(transaction.task.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'BLOCKED' }),
+        data: { status: 'IN_PROGRESS' },
+      }),
+    );
+    expect(transaction.taskActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'BLOCKER_RESOLVED',
+          message: 'Resolved blocker: Waiting on vendor access.',
+        }),
+      }),
+    );
+    expect(transaction.taskActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'STATUS_CHANGED',
+          message: 'Changed status from BLOCKED to IN_PROGRESS.',
+        }),
+      }),
+    );
+    expect(transaction.notification.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            recipientId: 'other-member-id',
+            type: 'TASK_UNBLOCKED',
+            resourceId: 'task-id',
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('does not resolve a blocker for unauthorized users or another task', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'MEMBER',
+    });
+    transaction.projectMember.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.resolveBlocker(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'blocker-id',
+        'verified-user-id',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transaction.taskBlocker.updateMany).not.toHaveBeenCalled();
+
+    transaction.projectMember.findFirst.mockResolvedValue({
+      id: 'project-member-id',
+    });
+    transaction.taskBlocker.findFirst.mockResolvedValue(null);
+    await expect(
+      service.resolveBlocker(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'other-task-blocker',
+        'verified-user-id',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transaction.taskBlocker.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects resolution when the task status update fails and leaves transaction rollback to caller', async () => {
+    transaction.task.findFirst.mockResolvedValue({
+      ...taskRow,
+      status: 'BLOCKED',
+    });
+    transaction.taskBlocker.findFirst.mockResolvedValue({
+      id: 'blocker-id',
+      reason: 'Waiting for approval.',
+      priorStatus: 'TODO',
+    });
+    transaction.task.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      service.resolveBlocker(
+        'organization-id',
+        'project-id',
+        'task-id',
+        'blocker-id',
+        'verified-user-id',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(transaction.taskBlocker.updateMany).toHaveBeenCalled();
+    expect(transaction.taskActivity.create).not.toHaveBeenCalled();
   });
 
   it('notifies other involved project members when task status changes', async () => {

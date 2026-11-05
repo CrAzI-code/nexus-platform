@@ -32,6 +32,10 @@ export class CreateTaskCommentDto {
   body!: string;
 }
 
+export class CreateTaskBlockerDto {
+  reason!: string;
+}
+
 type RequestBody = Record<string, unknown>;
 
 function isTaskStatus(value: unknown): value is TaskStatus {
@@ -212,5 +216,24 @@ export class CreateTaskCommentPipe
       );
     }
     return { body: comment };
+  }
+}
+
+@Injectable()
+export class CreateTaskBlockerPipe
+  implements PipeTransform<unknown, CreateTaskBlockerDto>
+{
+  transform(value: unknown): CreateTaskBlockerDto {
+    const body = readBody(value, ['reason']);
+    if (typeof body.reason !== 'string') {
+      throw new BadRequestException('Blocker explanation is required.');
+    }
+    const reason = body.reason.trim();
+    if (!reason || Array.from(reason).length > 2000) {
+      throw new BadRequestException(
+        'Provide a blocker explanation of no more than 2000 characters.',
+      );
+    }
+    return { reason };
   }
 }

@@ -90,24 +90,68 @@ export const TaskPriority = {
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
 
 
+export const FileScanStatus = {
+  CLEAN: 'CLEAN',
+  UNSCANNED: 'UNSCANNED'
+} as const
+
+export type FileScanStatus = (typeof FileScanStatus)[keyof typeof FileScanStatus]
+
+
 export const TaskActivityType = {
   CREATED: 'CREATED',
   UPDATED: 'UPDATED',
   STATUS_CHANGED: 'STATUS_CHANGED',
+  BLOCKER_CREATED: 'BLOCKER_CREATED',
+  BLOCKER_RESOLVED: 'BLOCKER_RESOLVED',
   ASSIGNEE_CHANGED: 'ASSIGNEE_CHANGED',
   COMMENT_ADDED: 'COMMENT_ADDED',
   ARCHIVED: 'ARCHIVED',
-  RESTORED: 'RESTORED'
+  RESTORED: 'RESTORED',
+  AUTOMATION: 'AUTOMATION'
 } as const
 
 export type TaskActivityType = (typeof TaskActivityType)[keyof typeof TaskActivityType]
+
+
+export const WorkflowAutomationTrigger = {
+  TASK_CREATED: 'TASK_CREATED',
+  TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
+  TASK_ASSIGNED: 'TASK_ASSIGNED',
+  TASK_DUE_DATE_APPROACHING: 'TASK_DUE_DATE_APPROACHING',
+  TASK_OVERDUE: 'TASK_OVERDUE',
+  TASK_BLOCKER_REPORTED: 'TASK_BLOCKER_REPORTED',
+  TASK_BLOCKER_RESOLVED: 'TASK_BLOCKER_RESOLVED'
+} as const
+
+export type WorkflowAutomationTrigger = (typeof WorkflowAutomationTrigger)[keyof typeof WorkflowAutomationTrigger]
+
+
+export const WorkflowAutomationAction = {
+  SEND_NOTIFICATION: 'SEND_NOTIFICATION',
+  CHANGE_STATUS: 'CHANGE_STATUS',
+  ASSIGN_MEMBER: 'ASSIGN_MEMBER'
+} as const
+
+export type WorkflowAutomationAction = (typeof WorkflowAutomationAction)[keyof typeof WorkflowAutomationAction]
+
+
+export const WorkflowAutomationExecutionStatus = {
+  RUNNING: 'RUNNING',
+  SUCCEEDED: 'SUCCEEDED',
+  SKIPPED: 'SKIPPED',
+  FAILED: 'FAILED'
+} as const
+
+export type WorkflowAutomationExecutionStatus = (typeof WorkflowAutomationExecutionStatus)[keyof typeof WorkflowAutomationExecutionStatus]
 
 
 export const InvitationStatus = {
   PENDING: 'PENDING',
   ACCEPTED: 'ACCEPTED',
   EXPIRED: 'EXPIRED',
-  REVOKED: 'REVOKED'
+  REVOKED: 'REVOKED',
+  DECLINED: 'DECLINED'
 } as const
 
 export type InvitationStatus = (typeof InvitationStatus)[keyof typeof InvitationStatus]
@@ -118,10 +162,16 @@ export const NotificationType = {
   TASK_COMMENT: 'TASK_COMMENT',
   TASK_MENTION: 'TASK_MENTION',
   TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
+  TASK_BLOCKED: 'TASK_BLOCKED',
+  TASK_UNBLOCKED: 'TASK_UNBLOCKED',
+  TASK_DUE_DATE: 'TASK_DUE_DATE',
+  TASK_OVERDUE: 'TASK_OVERDUE',
   PROJECT_ADDED: 'PROJECT_ADDED',
   PROJECT_UPDATED: 'PROJECT_UPDATED',
   ORGANIZATION_INVITATION: 'ORGANIZATION_INVITATION',
-  TEAM_UPDATED: 'TEAM_UPDATED'
+  TEAM_UPDATED: 'TEAM_UPDATED',
+  PROJECT_DISCUSSION_MESSAGE: 'PROJECT_DISCUSSION_MESSAGE',
+  WORKFLOW_AUTOMATION: 'WORKFLOW_AUTOMATION'
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]
@@ -143,6 +193,8 @@ export const AuditLogAction = {
   INVITATION_CREATED: 'INVITATION_CREATED',
   INVITATION_REVOKED: 'INVITATION_REVOKED',
   INVITATION_ACCEPTED: 'INVITATION_ACCEPTED',
+  INVITATION_RESENT: 'INVITATION_RESENT',
+  INVITATION_DECLINED: 'INVITATION_DECLINED',
   PROJECT_CREATED: 'PROJECT_CREATED',
   PROJECT_UPDATED: 'PROJECT_UPDATED',
   PROJECT_ARCHIVED: 'PROJECT_ARCHIVED',
@@ -152,6 +204,8 @@ export const AuditLogAction = {
   TASK_ASSIGNED: 'TASK_ASSIGNED',
   TASK_UPDATED: 'TASK_UPDATED',
   TASK_STATUS_CHANGED: 'TASK_STATUS_CHANGED',
+  TASK_BLOCKED: 'TASK_BLOCKED',
+  TASK_UNBLOCKED: 'TASK_UNBLOCKED',
   TASK_ARCHIVED: 'TASK_ARCHIVED',
   TASK_RESTORED: 'TASK_RESTORED',
   FILE_UPLOADED: 'FILE_UPLOADED',

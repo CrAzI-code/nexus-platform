@@ -61,12 +61,7 @@ export function FileAttachmentsPanel({
         const token = await getToken();
         if (!token) throw new Error("Your session expired. Sign in again.");
         const page = taskId
-          ? await listTaskAttachments(
-              token,
-              organizationId,
-              projectId,
-              taskId,
-            )
+          ? await listTaskAttachments(token, organizationId, projectId, taskId)
           : await listProjectFiles(token, organizationId, projectId);
         if (active) setLoaded({ key: requestKey, result: page, error: null });
       } catch (requestError) {
@@ -87,14 +82,7 @@ export function FileAttachmentsPanel({
     return () => {
       active = false;
     };
-  }, [
-    getToken,
-    isLoaded,
-    organizationId,
-    projectId,
-    requestKey,
-    taskId,
-  ]);
+  }, [getToken, isLoaded, organizationId, projectId, requestKey, taskId]);
 
   useEffect(() => {
     const objectUrl = preview?.url;
@@ -263,7 +251,11 @@ export function FileAttachmentsPanel({
   }
 
   async function remove(file: FileAttachment) {
-    if (!window.confirm(`Remove “${file.originalName}” from this ${taskId ? "task" : "project"}?`)) {
+    if (
+      !window.confirm(
+        `Remove “${file.originalName}” from this ${taskId ? "task" : "project"}?`,
+      )
+    ) {
       return;
     }
     setBusyFileId(file.id);
@@ -290,10 +282,15 @@ export function FileAttachmentsPanel({
   const title = taskId ? "Task attachments" : "Project files";
 
   return (
-    <section className="file-panel" aria-labelledby={`file-panel-title-${taskId ?? projectId}`}>
+    <section
+      className="file-panel"
+      aria-labelledby={`file-panel-title-${taskId ?? projectId}`}
+    >
       <header className="file-panel-header">
         <div>
-          <p className="file-panel-eyebrow">{taskId ? "Task resources" : "Shared workspace"}</p>
+          <p className="file-panel-eyebrow">
+            {taskId ? "Task resources" : "Shared workspace"}
+          </p>
           <h2 id={`file-panel-title-${taskId ?? projectId}`}>{title}</h2>
         </div>
         {result?.canUpload && (
@@ -317,17 +314,31 @@ export function FileAttachmentsPanel({
       {uploadProgress !== null && (
         <div className="file-upload-progress" aria-live="polite">
           <div className="file-upload-progress-label">
-            <span>Uploading file…</span>
+            <span>
+              {uploadProgress === 100
+                ? "Verifying file security…"
+                : "Uploading file…"}
+            </span>
             <span>{uploadProgress}%</span>
           </div>
           <progress max={100} value={uploadProgress} />
         </div>
       )}
-      {notice && <p className="file-panel-notice" role="status">{notice}</p>}
-      {error && <p className="file-panel-error" role="alert">{error}</p>}
+      {notice && (
+        <p className="file-panel-notice" role="status">
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p className="file-panel-error" role="alert">
+          {error}
+        </p>
+      )}
 
       {isLoading ? (
-        <p className="file-panel-state" aria-live="polite">Loading files…</p>
+        <p className="file-panel-state" aria-live="polite">
+          Loading files…
+        </p>
       ) : loadError ? (
         <div className="file-panel-state" role="alert">
           <p>{loadError}</p>
@@ -357,8 +368,11 @@ export function FileAttachmentsPanel({
                   <strong title={file.originalName}>{file.originalName}</strong>
                   <span>
                     {formatFileType(file.mimeType)} ·{" "}
-                    {formatFileSize(file.sizeBytes)} · {file.uploaderName} ·{" "}
-                    {formatFileDate(file.uploadedAt)}
+                    {formatFileSize(file.sizeBytes)} ·{" "}
+                    {file.scanStatus === "CLEAN"
+                      ? "Scanned clean"
+                      : "Not scanned — unverified"}{" "}
+                    · {file.uploaderName} · {formatFileDate(file.uploadedAt)}
                   </span>
                 </div>
                 <div className="file-list-actions">
@@ -374,11 +388,18 @@ export function FileAttachmentsPanel({
                   )}
                   <button
                     className="file-action-button"
-                    disabled={busyFileId === file.id}
+                    disabled={
+                      busyFileId === file.id || file.scanStatus !== "CLEAN"
+                    }
+                    title={
+                      file.scanStatus === "CLEAN"
+                        ? "Download file"
+                        : "This file is unavailable until it has been scanned."
+                    }
                     onClick={() => void download(file)}
                     type="button"
                   >
-                    Download
+                    {file.scanStatus === "CLEAN" ? "Download" : "Unverified"}
                   </button>
                   {file.canRemove && (
                     <button
@@ -407,7 +428,9 @@ export function FileAttachmentsPanel({
         </>
       ) : (
         <div className="file-panel-empty">
-          <span className="file-empty-icon" aria-hidden="true">↥</span>
+          <span className="file-empty-icon" aria-hidden="true">
+            ↥
+          </span>
           <strong>No files yet</strong>
           <p>
             {result?.canUpload

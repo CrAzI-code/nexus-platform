@@ -4,11 +4,16 @@ import { PrismaModule } from '../prisma.module.js';
 import { NotificationsController } from './notifications.controller.js';
 import { NotificationsService } from './notifications.service.js';
 import { NotificationStreamService } from './notification-stream.service.js';
+import { OverdueNotificationsService } from './overdue-notifications.service.js';
 
 @Module({
   imports: [AuthModule, PrismaModule],
   controllers: [NotificationsController],
-  providers: [NotificationsService, NotificationStreamService],
+  providers: [
+    NotificationsService,
+    NotificationStreamService,
+    OverdueNotificationsService,
+  ],
   exports: [NotificationsService, NotificationStreamService],
 })
 export class NotificationsModule {}

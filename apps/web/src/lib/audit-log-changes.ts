@@ -14,9 +14,7 @@ function flattenSnapshot(value: unknown): Map<string, unknown> {
   const fields = new Map<string, unknown>();
   if (value === null || value === undefined) return fields;
 
-  const pending: { path: string[]; value: unknown }[] = [
-    { path: [], value },
-  ];
+  const pending: { path: string[]; value: unknown }[] = [{ path: [], value }];
 
   while (pending.length > 0) {
     const current = pending.pop();
@@ -84,6 +82,30 @@ function valuesEqual(left: unknown, right: unknown): boolean {
   return true;
 }
 
+function isPrivateField(path: string): boolean {
+  return path.split(".").some((segment) => {
+    const normalized = segment.toLowerCase();
+    return (
+      segment === "id" ||
+      segment === "ids" ||
+      /(?:Id|Ids|ID|IDs)$/.test(segment) ||
+      /_(?:id|ids)$/i.test(segment) ||
+      normalized.includes("password") ||
+      normalized.includes("secret") ||
+      normalized.includes("token")
+    );
+  });
+}
+
+function isIdentifierValue(value: unknown): boolean {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      value,
+    )
+  );
+}
+
 function humanizeSegment(segment: string): string {
   return segment
     .replace(/([a-z\d])([A-Z])/g, "$1 $2")
@@ -119,9 +141,7 @@ export function formatAuditFieldValue(value: unknown): string {
     if (Array.isArray(currentValue)) {
       return currentValue.length === 0
         ? "No values"
-        : currentValue
-            .map((item) => format(item, depth + 1))
-            .join(", ");
+        : currentValue.map((item) => format(item, depth + 1)).join(", ");
     }
     if (isRecord(currentValue)) {
       const entries = Object.entries(currentValue);
@@ -140,6 +160,39 @@ export function formatAuditFieldValue(value: unknown): string {
   return format(value, 0);
 }
 
+export function getAuditResourceName(
+  before: unknown,
+  after: unknown,
+): string | null {
+  const preferredKeys = [
+    "name",
+    "title",
+    "fileName",
+    "filename",
+    "projectName",
+    "taskTitle",
+    "memberName",
+    "email",
+  ];
+
+  function findName(value: unknown, depth: number): string | null {
+    if (!isRecord(value) || depth > 3) return null;
+    for (const key of preferredKeys) {
+      const candidate = value[key];
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        return candidate.trim();
+      }
+    }
+    for (const nestedValue of Object.values(value)) {
+      const nestedName = findName(nestedValue, depth + 1);
+      if (nestedName) return nestedName;
+    }
+    return null;
+  }
+
+  return findName(after, 0) ?? findName(before, 0);
+}
+
 export function getAuditFieldChanges(
   before: unknown,
   after: unknown,
@@ -152,6 +205,9 @@ export function getAuditFieldChanges(
     .sort((left, right) => left.localeCompare(right))
     .filter(
       (path) =>
+        !isPrivateField(path) &&
+        !isIdentifierValue(beforeFields.get(path)) &&
+        !isIdentifierValue(afterFields.get(path)) &&
         !valuesEqual(
           beforeFields.get(path) ?? null,
           afterFields.get(path) ?? null,

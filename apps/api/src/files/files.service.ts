@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -6,8 +7,10 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
 import { Prisma } from '../generated/prisma/client.js';
 import type { OrganizationRole } from '../generated/prisma/client.js';
 import { AuditLogsService } from '../audit-logs/audit-logs.service.js';
@@ -16,6 +19,11 @@ import {
   FILE_STORAGE_PROVIDER,
   type FileStorageProvider,
 } from './file-storage.js';
+import {
+  MALWARE_SCANNER_PROVIDER,
+  type MalwareScanner,
+  type MalwareScanResult,
+} from './malware-scanner.js';
 import {
   getMaximumFileUploadSize,
   supportsInlinePreview,
@@ -35,12 +43,16 @@ const fileSelect = {
   originalName: true,
   mimeType: true,
   sizeBytes: true,
+  scanStatus: true,
   createdAt: true,
   removedAt: true,
   uploaderMembership: {
     select: { user: { select: { name: true } } },
   },
-  taskAttachment: { select: { taskId: true } },
+  project: { select: { name: true } },
+  taskAttachment: {
+    select: { taskId: true, task: { select: { title: true } } },
+  },
 } satisfies Prisma.FileAttachmentSelect;
 
 type FileRecord = Prisma.FileAttachmentGetPayload<{
@@ -59,6 +71,7 @@ export interface FileAttachmentResponse {
   originalName: string;
   mimeType: string;
   sizeBytes: number;
+  scanStatus: 'CLEAN' | 'UNSCANNED';
   uploadedAt: Date;
   uploaderName: string;
   canPreview: boolean;
@@ -73,8 +86,20 @@ export interface FileAttachmentPage {
   canUpload: boolean;
 }
 
+export interface OrganizationFileResponse extends FileAttachmentResponse {
+  projectName: string;
+  taskTitle: string | null;
+}
+
+export interface OrganizationFilePage {
+  items: OrganizationFileResponse[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
 export interface FileContent {
-  buffer: Buffer;
+  stream: Readable;
   mimeType: string;
   sizeBytes: number;
   originalName: string;
@@ -90,6 +115,8 @@ export class FilesService {
     private readonly prisma: PrismaService,
     @Inject(FILE_STORAGE_PROVIDER)
     private readonly storage: FileStorageProvider,
+    @Inject(MALWARE_SCANNER_PROVIDER)
+    private readonly scanner: MalwareScanner,
   ) {}
 
   listProjectFiles(
@@ -111,19 +138,70 @@ export class FilesService {
     return this.listFiles(organizationId, projectId, taskId, userId, query);
   }
 
+  async listOrganizationFiles(
+    organizationId: string,
+    userId: string,
+    query: FileListQuery,
+  ): Promise<OrganizationFilePage> {
+    return this.prisma.$transaction(async (transaction) => {
+      const membership = await transaction.organizationMembership.findFirst({
+        where: {
+          organizationId,
+          userId,
+          status: 'ACTIVE',
+          organization: { status: 'ACTIVE' },
+        },
+        select: { role: true },
+      });
+      if (!membership) throw new NotFoundException('Organization not found.');
+
+      const rows = await transaction.fileAttachment.findMany({
+        where: {
+          organizationId,
+          removedAt: null,
+          ...(membership.role === 'OWNER' || membership.role === 'ADMIN'
+            ? {}
+            : {
+                project: {
+                  is: {
+                    members: {
+                      some: {
+                        userId,
+                        status: 'ACTIVE',
+                        membership: { status: 'ACTIVE' },
+                      },
+                    },
+                  },
+                },
+              }),
+          ...this.getFileFilters(query),
+        },
+        select: fileSelect,
+        orderBy: this.getFileSort(query),
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize + 1,
+      });
+      const hasMore = rows.length > query.pageSize;
+      return {
+        items: rows.slice(0, query.pageSize).map((file) => ({
+          ...this.toResponse(file, membership.role, userId),
+          projectName: file.project.name,
+          taskTitle: file.taskAttachment?.task.title ?? null,
+        })),
+        page: query.page,
+        pageSize: query.pageSize,
+        hasMore,
+      };
+    });
+  }
+
   async uploadProjectFile(
     organizationId: string,
     projectId: string,
     userId: string,
     file: UploadFileData,
   ): Promise<FileAttachmentResponse> {
-    return this.upload(
-      organizationId,
-      projectId,
-      undefined,
-      userId,
-      file,
-    );
+    return this.upload(organizationId, projectId, undefined, userId, file);
   }
 
   async uploadTaskAttachment(
@@ -149,12 +227,23 @@ export class FilesService {
         projectId,
         userId,
       );
-      return this.findActiveFile(transaction, organizationId, projectId, fileId);
+      return this.findActiveFile(
+        transaction,
+        organizationId,
+        projectId,
+        fileId,
+      );
     });
 
-    let buffer: Buffer;
+    if (file.scanStatus !== 'CLEAN') {
+      throw new ServiceUnavailableException(
+        'File security verification is required before download.',
+      );
+    }
+
+    let storedObject;
     try {
-      buffer = await this.storage.read(file.storageKey);
+      storedObject = await this.storage.openActive(file.storageKey);
     } catch (error) {
       this.logStorageFailure('read', error);
       if (hasErrorCode(error, 'ENOENT')) {
@@ -163,10 +252,8 @@ export class FilesService {
       throw new InternalServerErrorException('File content is unavailable.');
     }
 
-    if (
-      buffer.length !== file.sizeBytes ||
-      !this.hasStoredContentSignature(file.mimeType, buffer)
-    ) {
+    if (storedObject.sizeBytes !== file.sizeBytes) {
+      storedObject.stream.destroy();
       this.logger.warn(
         JSON.stringify({ event: 'stored_file_integrity_check_failed' }),
       );
@@ -174,11 +261,12 @@ export class FilesService {
     }
 
     return {
-      buffer,
+      stream: storedObject.stream,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       originalName: file.originalName,
-      canPreview: supportsInlinePreview(file.mimeType),
+      canPreview:
+        file.scanStatus === 'CLEAN' && supportsInlinePreview(file.mimeType),
     };
   }
 
@@ -200,46 +288,51 @@ export class FilesService {
           id: fileId,
           organizationId,
           projectId,
-          removedAt: null,
         },
         select: fileSelect,
       });
       if (!file) throw new NotFoundException('File not found.');
       this.assertCanRemove(file, access.role, userId);
 
-      const removedAt = new Date();
-      const update = await transaction.fileAttachment.updateMany({
-        where: {
-          id: fileId,
-          organizationId,
-          projectId,
-          removedAt: null,
-        },
-        data: { removedAt },
-      });
-      if (update.count !== 1) throw new ConflictException('File was already removed.');
+      if (file.removedAt === null) {
+        const removedAt = new Date();
+        const update = await transaction.fileAttachment.updateMany({
+          where: {
+            id: fileId,
+            organizationId,
+            projectId,
+            removedAt: null,
+          },
+          data: { removedAt },
+        });
+        if (update.count !== 1)
+          throw new ConflictException('File was already removed.');
 
-      await AuditLogsService.record(transaction, {
-        organizationId,
-        actorId: userId,
-        action: 'FILE_REMOVED',
-        targetType: 'FILE_ATTACHMENT',
-        targetId: file.id,
-        before: {
-          mimeType: file.mimeType,
-          sizeBytes: file.sizeBytes,
-          taskId: file.taskAttachment?.taskId ?? null,
-        },
-        after: { removed: true },
-      });
+        await AuditLogsService.record(transaction, {
+          organizationId,
+          actorId: userId,
+          action: 'FILE_REMOVED',
+          targetType: 'FILE_ATTACHMENT',
+          targetId: file.id,
+          before: {
+            mimeType: file.mimeType,
+            sizeBytes: file.sizeBytes,
+            taskId: file.taskAttachment?.taskId ?? null,
+          },
+          after: { removed: true },
+        });
+      }
 
       return file.storageKey;
     });
 
     try {
-      await this.storage.remove(storageKey);
+      await this.storage.remove(storageKey, 'active');
     } catch (error) {
       this.logStorageFailure('remove', error);
+      throw new ServiceUnavailableException(
+        'File removal is pending. Please retry later.',
+      );
     }
   }
 
@@ -273,12 +366,11 @@ export class FilesService {
           organizationId,
           projectId,
           removedAt: null,
-          ...(taskId
-            ? { taskAttachment: { is: { taskId } } }
-            : {}),
+          ...(taskId ? { taskAttachment: { is: { taskId } } } : {}),
+          ...this.getFileFilters(query),
         },
         select: fileSelect,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: this.getFileSort(query),
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize + 1,
       });
@@ -328,11 +420,37 @@ export class FilesService {
 
     const storageKey = randomUUID();
     try {
-      await this.storage.write(storageKey, file.buffer);
+      await this.storage.putQuarantined(storageKey, file.buffer, file.mimeType);
     } catch (error) {
-      this.logStorageFailure('write', error);
+      this.logStorageFailure('quarantine_write', error);
       throw new InternalServerErrorException('File storage is unavailable.');
     }
+
+    const scanResult = await this.scanQuarantinedFile(storageKey, file);
+    if (scanResult.status === 'infected') {
+      await this.removeQuietly(storageKey, 'quarantine', 'infected_cleanup');
+      throw new BadRequestException('The file failed its security scan.');
+    }
+    if (scanResult.status === 'unavailable') {
+      await this.removeQuietly(
+        storageKey,
+        'quarantine',
+        'scanner_unavailable_cleanup',
+      );
+      throw new ServiceUnavailableException(
+        'File security scanning is temporarily unavailable.',
+      );
+    }
+
+    try {
+      await this.storage.promoteQuarantined(storageKey);
+    } catch (error) {
+      this.logStorageFailure('quarantine_promote', error);
+      await this.removeQuietly(storageKey, 'quarantine', 'promote_cleanup');
+      await this.removeQuietly(storageKey, 'active', 'promote_cleanup');
+      throw new InternalServerErrorException('File storage is unavailable.');
+    }
+
     try {
       return await this.prisma.$transaction(async (transaction) => {
         const access = await this.requireProjectAccess(
@@ -365,10 +483,11 @@ export class FilesService {
             originalName: file.originalName,
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
+            scanStatus: 'CLEAN',
             ...(taskId
               ? {
                   taskAttachment: {
-                    create: { organizationId, projectId, taskId },
+                    create: { taskId },
                   },
                 }
               : {}),
@@ -384,6 +503,7 @@ export class FilesService {
           after: {
             mimeType: created.mimeType,
             sizeBytes: created.sizeBytes,
+            scanStatus: created.scanStatus,
             taskId: created.taskAttachment?.taskId ?? null,
           },
         });
@@ -391,7 +511,7 @@ export class FilesService {
       });
     } catch (error) {
       try {
-        await this.storage.remove(storageKey);
+        await this.storage.remove(storageKey, 'active');
       } catch (cleanupError) {
         this.logStorageFailure('upload_rollback', cleanupError);
       }
@@ -506,9 +626,11 @@ export class FilesService {
       originalName: file.originalName,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
+      scanStatus: file.scanStatus,
       uploadedAt: file.createdAt,
       uploaderName: file.uploaderMembership.user.name,
-      canPreview: supportsInlinePreview(file.mimeType),
+      canPreview:
+        file.scanStatus === 'CLEAN' && supportsInlinePreview(file.mimeType),
       canRemove:
         file.uploadedById === userId ||
         role === 'OWNER' ||
@@ -517,20 +639,69 @@ export class FilesService {
     };
   }
 
-  private hasStoredContentSignature(mimeType: string, buffer: Buffer): boolean {
+  private getFileFilters(
+    query: FileListQuery,
+  ): Prisma.FileAttachmentWhereInput {
+    return {
+      ...(query.search
+        ? { originalName: { contains: query.search, mode: 'insensitive' } }
+        : {}),
+      ...(query.scanStatus ? { scanStatus: query.scanStatus } : {}),
+      ...(query.type === 'images'
+        ? { mimeType: { startsWith: 'image/' } }
+        : query.type === 'text'
+          ? { mimeType: { startsWith: 'text/' } }
+          : query.type === 'documents'
+            ? {
+                mimeType: {
+                  in: ['application/pdf', 'text/plain', 'text/csv'],
+                },
+              }
+            : {}),
+    };
+  }
+
+  private getFileSort(
+    query: FileListQuery,
+  ): Prisma.FileAttachmentOrderByWithRelationInput[] {
+    if (query.sort === 'name') return [{ originalName: 'asc' }, { id: 'asc' }];
+    if (query.sort === 'size') {
+      return [{ sizeBytes: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }];
+    }
+    return [{ createdAt: 'desc' }, { id: 'desc' }];
+  }
+
+  private async scanQuarantinedFile(
+    storageKey: string,
+    file: ReturnType<typeof validateFileUpload>,
+  ): Promise<MalwareScanResult> {
     try {
-      validateFileUpload(
-        {
-          originalname: `stored${extensionForMimeType(mimeType)}`,
-          mimetype: mimeType,
-          size: buffer.length,
-          buffer,
-        },
-        this.maxUploadBytes,
+      return await this.scanner.scan({
+        storageKey,
+        content: file.buffer,
+        mimeType: file.mimeType,
+        originalName: file.originalName,
+      });
+    } catch (error) {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'malware_scanner_failure',
+          errorCode: safeErrorCode(error),
+        }),
       );
-      return true;
-    } catch {
-      return false;
+      return { status: 'unavailable' };
+    }
+  }
+
+  private async removeQuietly(
+    storageKey: string,
+    area: 'active' | 'quarantine',
+    operation: string,
+  ): Promise<void> {
+    try {
+      await this.storage.remove(storageKey, area);
+    } catch (error) {
+      this.logStorageFailure(operation, error);
     }
   }
 
@@ -542,25 +713,6 @@ export class FilesService {
         errorCode: safeErrorCode(error),
       }),
     );
-  }
-}
-
-function extensionForMimeType(mimeType: string): string {
-  switch (mimeType) {
-    case 'application/pdf':
-      return '.pdf';
-    case 'image/png':
-      return '.png';
-    case 'image/jpeg':
-      return '.jpg';
-    case 'image/webp':
-      return '.webp';
-    case 'text/plain':
-      return '.txt';
-    case 'text/csv':
-      return '.csv';
-    default:
-      return '';
   }
 }
 

@@ -34,6 +34,7 @@ describe('NotificationsService', () => {
     organizationMembership: { findMany: vi.fn() },
     projectMember: { findMany: vi.fn() },
     invitation: { findMany: vi.fn() },
+    task: { findMany: vi.fn() },
   };
   const stream = { publish: vi.fn() };
 
@@ -56,6 +57,7 @@ describe('NotificationsService', () => {
           notification: {
             createManyAndReturn: prisma.notification.createManyAndReturn,
           },
+          task: { findMany: prisma.task.findMany },
         }),
     );
     prisma.notification.createManyAndReturn.mockResolvedValue([]);
@@ -67,8 +69,11 @@ describe('NotificationsService', () => {
     prisma.organizationMembership.findMany.mockResolvedValue([
       { organizationId: 'organization-id', role: 'MEMBER' },
     ]);
-    prisma.projectMember.findMany.mockResolvedValue([{ projectId: 'project-id' }]);
+    prisma.projectMember.findMany.mockResolvedValue([
+      { projectId: 'project-id' },
+    ]);
     prisma.invitation.findMany.mockResolvedValue([]);
+    prisma.task.findMany.mockResolvedValue([]);
   });
 
   it('publishes newly persisted notifications only after the transaction commits', async () => {
@@ -82,6 +87,7 @@ describe('NotificationsService', () => {
           notification: {
             createManyAndReturn: prisma.notification.createManyAndReturn,
           },
+          task: { findMany: prisma.task.findMany },
         });
         order.push('committed');
         return result;
@@ -120,6 +126,7 @@ describe('NotificationsService', () => {
           notification: {
             createManyAndReturn: prisma.notification.createManyAndReturn,
           },
+          task: { findMany: prisma.task.findMany },
         });
         throw new Error('transaction failed');
       },
@@ -176,6 +183,38 @@ describe('NotificationsService', () => {
           userId: 'recipient-id',
           organizationId: { in: ['organization-id'] },
         }),
+      }),
+    );
+  });
+
+  it('replays only currently visible persisted records after an SSE cursor', async () => {
+    prisma.notification.findMany.mockResolvedValue([notificationRow]);
+
+    await expect(
+      service.listForStream('recipient-id', 'member@example.com', true, {
+        createdAt: new Date('2026-11-01T23:59:00.000Z'),
+        id: '123e4567-e89b-42d3-a456-426614174000',
+      }),
+    ).resolves.toMatchObject([{ id: 'notification-id' }]);
+
+    expect(prisma.notification.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            expect.objectContaining({ recipientId: 'recipient-id' }),
+            {
+              OR: [
+                { createdAt: { gt: new Date('2026-11-01T23:59:00.000Z') } },
+                {
+                  createdAt: new Date('2026-11-01T23:59:00.000Z'),
+                  id: { gt: '123e4567-e89b-42d3-a456-426614174000' },
+                },
+              ],
+            },
+          ],
+        },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        take: 100,
       }),
     );
   });
@@ -282,6 +321,29 @@ describe('NotificationsService', () => {
     );
   });
 
+  it('creates a persisted, deduplicated notification for an eligible pending invitation', async () => {
+    prisma.invitation.findMany.mockResolvedValue([
+      { id: 'invitation-id', organizationId: 'organization-id' },
+    ]);
+
+    await service.list('recipient-id', 'member@example.com', true, 1, 20);
+
+    expect(prisma.notification.createManyAndReturn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            recipientId: 'recipient-id',
+            organizationId: 'organization-id',
+            type: 'ORGANIZATION_INVITATION',
+            resourceId: 'invitation-id',
+            eventKey: 'organization-invitation:invitation-id',
+          }),
+        ],
+        skipDuplicates: true,
+      }),
+    );
+  });
+
   it('marks a notification read only when it remains visible to its recipient', async () => {
     const readAt = new Date();
     prisma.notification.findFirst
@@ -294,7 +356,10 @@ describe('NotificationsService', () => {
         'member@example.com',
         true,
       ),
-    ).resolves.toMatchObject({ id: 'notification-id', readAt: expect.any(Date) });
+    ).resolves.toMatchObject({
+      id: 'notification-id',
+      readAt: expect.any(Date),
+    });
     expect(prisma.notification.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -343,10 +408,12 @@ describe('NotificationListPipe', () => {
     expect(pipe.transform({})).toEqual({ page: 1, pageSize: 20 });
   });
 
-  it.each([{ page: '0' }, { pageSize: '101' }, { page: '1.2' }, { other: 'x' }])(
-    'rejects invalid pagination input',
-    (query) => {
-      expect(() => pipe.transform(query)).toThrow();
-    },
-  );
+  it.each([
+    { page: '0' },
+    { pageSize: '101' },
+    { page: '1.2' },
+    { other: 'x' },
+  ])('rejects invalid pagination input', (query) => {
+    expect(() => pipe.transform(query)).toThrow();
+  });
 });

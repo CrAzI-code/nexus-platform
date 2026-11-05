@@ -106,7 +106,9 @@ progresses.
 ### Local development
 
 1. Install the dependencies with `npm install` and start the PostgreSQL
-   development database using `docker compose up -d`.
+   development database using `docker compose up -d postgres`. To start local
+   S3-compatible file storage and malware scanning, follow
+   [the local infrastructure guide](./docs/local-infrastructure.md).
 2. Create `apps/api/.env` from the safe placeholders in `.env.example` (do not
    overwrite an existing local environment file). Configure the database and
    Clerk values required by the API. Add `FILE_STORAGE_PATH=./private-files`
@@ -119,8 +121,10 @@ progresses.
    ```
 
    The file-sharing migration is named
-   `20261102194218_file_sharing`. Review the migration and confirm the target is
-   a local development database before applying it.
+   `20261102194218_file_sharing`, and task blockers add
+   `20261103145000_task_blockers`. `migrate deploy` applies all pending
+   migrations. Review them and confirm the target is a local development
+   database before applying.
 4. Start the API and frontend in separate terminals:
 
    ```powershell

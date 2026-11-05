@@ -2,77 +2,86 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type {
-  Activity,
-  Task,
-  TaskPriority,
-  TaskStatus,
+import type { Task, TaskPriority, TaskStatus } from "./dashboard-data";
+import {
+  formatDueDate,
+  formatRelativeTime,
+  getAuditActivity,
+  getProjectProgress,
+  getTaskSummary,
+  isOverdue,
 } from "./dashboard-data";
-import { formatDueDate, isOverdue } from "./dashboard-data";
 import { Icon } from "./icons";
 import type { OrganizationProject } from "@/lib/organizations";
+import type { AuditLogItem } from "@/lib/audit-logs";
+import { EmptyState, ErrorState, LoadingState, StatusBadge } from "@/components/ui/feedback";
 
 type OverviewSectionProps = {
   tasks: Task[];
+  projects: OrganizationProject[];
+  memberCount: number | null;
+  isProjectsLoading: boolean;
+  isTasksLoading: boolean;
+  isMembersLoading: boolean;
 };
 
-export function OverviewSection({ tasks }: OverviewSectionProps) {
-  const completed = tasks.filter((task) => task.status === "DONE").length;
-  const inProgress = tasks.filter((task) => task.status === "IN_PROGRESS").length;
-  const overdue = tasks.filter(isOverdue).length;
+export function OverviewSection({
+  tasks,
+  projects,
+  memberCount,
+  isProjectsLoading,
+  isTasksLoading,
+  isMembersLoading,
+}: OverviewSectionProps) {
+  const summary = getTaskSummary(tasks);
   const cards = [
     {
-      label: "Tasks in your projects",
-      value: tasks.length,
-      note: "Across your active projects",
+      label: "Projects",
+      value: projects.filter((project) => project.status === "ACTIVE").length,
+      note: "Active in this organization",
+      icon: "briefcase" as const,
+      tone: "brand",
+      isLoading: isProjectsLoading,
+    },
+    {
+      label: "Tasks",
+      value: summary.total,
+      note: "Across projects you can access",
       icon: "check-square" as const,
-      tone: "",
+      tone: "success",
+      isLoading: isTasksLoading,
     },
     {
-      label: "In progress",
-      value: inProgress,
-      note: "Moving forward this week",
-      icon: "activity" as const,
-      tone: "",
+      label: "Team members",
+      value: memberCount ?? "—",
+      note: memberCount === null ? "Member count is unavailable" : "People in this organization",
+      icon: "users" as const,
+      tone: "blue",
+      isLoading: isMembersLoading,
     },
     {
-      label: "Completed",
-      value: completed,
-      note: "Finished in this workspace",
-      icon: "check" as const,
-      tone: "green",
-    },
-    {
-      label: "Overdue",
-      value: overdue,
-      note: overdue === 0 ? "You are all caught up" : "Needs your attention",
-      icon: "clock" as const,
-      tone: overdue > 0 ? "red" : "amber",
+      label: "Overdue tasks",
+      value: summary.overdue,
+      note: summary.overdue === 0 ? "Everything is on track" : "Needs your attention",
+      icon: "calendar" as const,
+      tone: summary.overdue > 0 ? "danger" : "warning",
+      isLoading: isTasksLoading,
     },
   ];
 
   return (
-    <section aria-labelledby="overview-title" className="overview-section">
-      <div className="section-heading">
-        <div>
-          <h2 id="overview-title">Your overview</h2>
-          <p>A quick look at what needs your attention.</p>
-        </div>
-      </div>
+    <section aria-label="Organization overview" className="overview-section">
       <div className="overview-grid">
         {cards.map((card) => (
           <article className="stat-card" key={card.label}>
-            <div className="stat-topline">
+            <span className={`stat-icon ${card.tone}`}>
+              <Icon name={card.icon} width={19} height={19} />
+            </span>
+            <div className="stat-copy">
+              {card.isLoading ? <span className="stat-value-skeleton" /> : <strong>{card.value}</strong>}
               <span>{card.label}</span>
-              <span className={`stat-icon ${card.tone}`}>
-                <Icon name={card.icon} width={16} height={16} />
-              </span>
+              <p>{card.note}</p>
             </div>
-            <div className="stat-value">
-              <strong>{card.value}</strong>
-              <span>tasks</span>
-            </div>
-            <p className="stat-footnote">{card.note}</p>
           </article>
         ))}
       </div>
@@ -83,6 +92,7 @@ export function OverviewSection({ tasks }: OverviewSectionProps) {
 type ProjectsSectionProps = {
   organizationId: string;
   projects: OrganizationProject[];
+  tasks: Task[];
   search: string;
   canCreate: boolean;
   isLoading: boolean;
@@ -90,12 +100,14 @@ type ProjectsSectionProps = {
   onCreate: () => void;
   onEdit: (project: OrganizationProject) => void;
   onArchive: (project: OrganizationProject) => void;
+  onRestore: (project: OrganizationProject) => void;
   onRetry: () => void;
 };
 
 export function ProjectsSection({
   organizationId,
   projects,
+  tasks,
   search,
   canCreate,
   isLoading,
@@ -103,6 +115,7 @@ export function ProjectsSection({
   onCreate,
   onEdit,
   onArchive,
+  onRestore,
   onRetry,
 }: ProjectsSectionProps) {
   const [showAll, setShowAll] = useState(false);
@@ -112,7 +125,7 @@ export function ProjectsSection({
       .includes(search.toLowerCase()),
   );
   const visibleProjects =
-    search || showAll ? filteredProjects : filteredProjects.slice(0, 2);
+    search || showAll ? filteredProjects : filteredProjects.slice(0, 4);
 
   return (
     <section aria-labelledby="projects-title" className="surface-card section-card" id="projects">
@@ -122,7 +135,7 @@ export function ProjectsSection({
           <p>Projects in this organization.</p>
         </div>
         <div className="project-heading-actions">
-          {!search && filteredProjects.length > 2 && (
+          {!search && filteredProjects.length > 4 && (
             <button
               aria-expanded={showAll || Boolean(search)}
               className="section-link"
@@ -142,15 +155,14 @@ export function ProjectsSection({
         </div>
       </div>
       {isLoading ? (
-        <p className="project-state" aria-live="polite">Loading projects…</p>
+        <LoadingState label="Loading projects" rows={4} />
       ) : error ? (
-        <div className="project-state project-state-error" role="alert">
-          <span>{error}</span>
-          <button className="text-button" onClick={onRetry} type="button">Try again</button>
-        </div>
+        <ErrorState message={error} onRetry={onRetry} />
       ) : visibleProjects.length > 0 ? (
         <div className="project-list">
-          {visibleProjects.map((project) => (
+          {visibleProjects.map((project) => {
+            const progress = getProjectProgress(tasks, project.id);
+            return (
             <article className="project-card" key={project.id}>
               <div className="project-card-top">
                 <span className="project-symbol" aria-hidden="true">
@@ -161,9 +173,9 @@ export function ProjectsSection({
                     .join("")
                     .toUpperCase()}
                 </span>
-                <span className={`project-status ${project.status.toLowerCase()}`}>
+                <StatusBadge tone={project.status === "ACTIVE" ? "success" : "neutral"}>
                   {project.status === "ACTIVE" ? "Active" : "Archived"}
-                </span>
+                </StatusBadge>
               </div>
               <h3>
                 <Link
@@ -179,6 +191,10 @@ export function ProjectsSection({
                 <span>{project.memberCount} {project.memberCount === 1 ? "member" : "members"}</span>
                 <span>{project.taskCount} {project.taskCount === 1 ? "task" : "tasks"}</span>
               </div>
+              <div className="project-progress" aria-label={`${progress}% complete`}>
+                <span><i style={{ width: `${progress}%` }} /></span>
+                <strong>{progress}%</strong>
+              </div>
               {project.canManage && project.status === "ACTIVE" && (
                 <div className="project-actions">
                   <button className="text-button" onClick={() => onEdit(project)} type="button">
@@ -189,20 +205,33 @@ export function ProjectsSection({
                   </button>
                 </div>
               )}
+              {project.canManage && project.status === "ARCHIVED" && (
+                <div className="project-actions">
+                  <button className="text-button" onClick={() => onRestore(project)} type="button">
+                    Restore
+                  </button>
+                </div>
+              )}
             </article>
-          ))}
+            );
+          })}
         </div>
       ) : projects.length === 0 && !search ? (
         <EmptyState
+          icon="briefcase"
           title="No projects yet"
           message={canCreate
             ? "Create your first project to give your team a place to work."
             : "Projects you’re assigned to will appear here."}
-          actionLabel={canCreate ? "Create a project" : undefined}
-          onAction={canCreate ? onCreate : undefined}
+          action={canCreate ? (
+            <button className="button button-primary button-small" onClick={onCreate} type="button">
+              Create a project
+            </button>
+          ) : undefined}
         />
       ) : (
         <EmptyState
+          icon="search"
           title="No projects match your search"
           message="Try another project name or description."
         />
@@ -315,14 +344,9 @@ export function TasksSection({
       </div>
       <div className="task-list" aria-live="polite">
         {isLoading ? (
-          <p className="task-list-message">Loading tasks…</p>
+          <LoadingState label="Loading tasks" rows={4} />
         ) : error ? (
-          <div className="task-list-message task-list-error" role="alert">
-            <p>{error}</p>
-            <button className="text-button" onClick={onRetry} type="button">
-              Try again
-            </button>
-          </div>
+          <ErrorState message={error} onRetry={onRetry} />
         ) : visibleTasks.length > 0 ? (
           visibleTasks.map((task) => {
             const overdue = isOverdue(task);
@@ -360,14 +384,18 @@ export function TasksSection({
           })
         ) : (
           <EmptyState
+            icon="check-square"
             title={hasFilters ? "No tasks match these filters" : "Nothing on your list yet"}
             message={
               hasFilters
                 ? "Clear the filters or try a different search."
                 : "Create your first task from a project page."
             }
-            actionLabel={hasFilters ? "Clear filters" : undefined}
-            onAction={hasFilters ? resetFilters : undefined}
+            action={hasFilters ? (
+              <button className="button button-secondary button-small" onClick={resetFilters} type="button">
+                Clear filters
+              </button>
+            ) : undefined}
           />
         )}
       </div>
@@ -376,58 +404,73 @@ export function TasksSection({
 }
 
 type ActivitySectionProps = {
-  activities: Activity[];
-  search: string;
+  activities: AuditLogItem[];
+  organizationId: string;
+  canView: boolean;
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
 };
 
-export function ActivitySection({ activities, search }: ActivitySectionProps) {
-  const visibleActivities = activities.filter((activity) =>
-    `${activity.person} ${activity.action} ${activity.target} ${activity.project}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
-
+export function ActivitySection({
+  activities,
+  organizationId,
+  canView,
+  isLoading,
+  error,
+  onRetry,
+}: ActivitySectionProps) {
   return (
     <section aria-labelledby="activity-title" className="surface-card section-card">
       <div className="section-heading">
         <div>
           <h2 id="activity-title">Recent activity</h2>
-          <p>Task discussions and change history.</p>
+          <p>Latest organization changes.</p>
         </div>
+        {canView && (
+          <Link className="section-link" href={`/organizations/${encodeURIComponent(organizationId)}/audit-logs`}>
+            View all <Icon name="arrow-right" width={14} height={14} />
+          </Link>
+        )}
       </div>
       <div className="activity-list" aria-live="polite">
-        {visibleActivities.length > 0 ? (
-          visibleActivities.slice(0, 5).map((activity) => (
+        {isLoading ? (
+          <LoadingState label="Loading recent activity" rows={5} />
+        ) : error ? (
+          <ErrorState message={error} onRetry={onRetry} />
+        ) : activities.length > 0 ? (
+          activities.slice(0, 6).map((activity) => {
+            const detail = getAuditActivity(activity);
+            return (
             <article className="activity-item" key={activity.id}>
-              <span
-                aria-hidden="true"
-                className="activity-avatar"
-                style={{ backgroundColor: activity.color }}
-              >
-                {activity.initials}
+              <span aria-hidden="true" className="activity-avatar">
+                <Icon
+                  name={activity.targetType === "ORGANIZATION_MEMBER"
+                    ? "users"
+                    : activity.targetType === "TASK"
+                      ? "check-square"
+                      : "briefcase"}
+                  width={17}
+                  height={17}
+                />
               </span>
               <div className="activity-copy">
                 <p>
-                  <strong>{activity.person}</strong> {activity.action}{" "}
-                  <strong>{activity.target}</strong>
+                  <strong>{activity.actorName}</strong> {detail.action}{" "}
+                  <span>{detail.target}</span>
                 </p>
-                <span>{activity.time}</span>
-                <span className="activity-label">{activity.project}</span>
+                <time dateTime={activity.createdAt}>{formatRelativeTime(activity.createdAt)}</time>
               </div>
             </article>
-          ))
+            );
+          })
         ) : (
           <EmptyState
-            title={
-              activities.length === 0
-                ? "Task history stays with each task"
-                : "No activity matches your search"
-            }
-            message={
-              activities.length === 0
-                ? "Open a task to review its comments and activity."
-                : "Try a different name, task, or project."
-            }
+            icon="activity"
+            title={canView ? "No organization activity yet" : "Activity is role-restricted"}
+            message={canView
+              ? "Project, task, member, and file changes will appear here."
+              : "Owners and Admins can review organization-wide audit activity."}
           />
         )}
       </div>
@@ -435,26 +478,73 @@ export function ActivitySection({ activities, search }: ActivitySectionProps) {
   );
 }
 
-function EmptyState({
-  title,
-  message,
-  actionLabel,
-  onAction,
-}: {
-  title: string;
-  message: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}) {
+export function TaskOverviewSection({ tasks }: { tasks: Task[] }) {
+  const summary = getTaskSummary(tasks);
+  const completedPercentage = summary.total === 0
+    ? 0
+    : Math.round((summary.completed / summary.total) * 100);
   return (
-    <div className="empty-state">
-      <strong>{title}</strong>
-      <span>{message}</span>
-      {actionLabel && onAction && (
-        <button className="text-button" onClick={onAction} type="button">
-          {actionLabel}
-        </button>
+    <section className="surface-card section-card task-overview-card" aria-labelledby="task-overview-title">
+      <div className="section-heading">
+        <div>
+          <h2 id="task-overview-title">Tasks overview</h2>
+          <p>Completion across accessible projects.</p>
+        </div>
+        <a className="section-link" href="#my-tasks">View tasks <Icon name="arrow-right" width={14} height={14} /></a>
+      </div>
+      {summary.total === 0 ? (
+        <EmptyState icon="check-square" title="No tasks yet" message="Tasks created inside your projects will be summarized here." />
+      ) : (
+        <div className="task-overview-content">
+          <div className="task-progress-ring" style={{ background: `conic-gradient(var(--brand-500) ${completedPercentage}%, var(--neutral-100) 0)` }}>
+            <span><strong>{summary.total}</strong>Total</span>
+          </div>
+          <dl className="task-overview-legend">
+            <div><dt><i className="legend-dot completed" />Completed</dt><dd>{summary.completed}</dd></div>
+            <div><dt><i className="legend-dot progress" />In progress</dt><dd>{summary.inProgress}</dd></div>
+            <div><dt><i className="legend-dot blocked" />Blocked</dt><dd>{summary.blocked}</dd></div>
+            <div><dt><i className="legend-dot overdue" />Overdue</dt><dd>{summary.overdue}</dd></div>
+          </dl>
+        </div>
       )}
-    </div>
+    </section>
+  );
+}
+
+export function QuickActionsSection({
+  organizationId,
+  canCreateProject,
+  canViewAudit,
+  onCreateProject,
+  onNotifications,
+}: {
+  organizationId: string;
+  canCreateProject: boolean;
+  canViewAudit: boolean;
+  onCreateProject: () => void;
+  onNotifications: () => void;
+}) {
+  const peoplePath = `/organizations/${encodeURIComponent(organizationId)}/members`;
+  const auditPath = `/organizations/${encodeURIComponent(organizationId)}/audit-logs`;
+  return (
+    <section className="surface-card section-card quick-actions-card" aria-labelledby="quick-actions-title">
+      <div className="section-heading">
+        <div><h2 id="quick-actions-title">Quick actions</h2><p>Jump straight into common work.</p></div>
+      </div>
+      <div className="quick-actions-grid">
+        {canCreateProject ? (
+          <button onClick={onCreateProject} type="button"><span><Icon name="plus" width={20} height={20} /></span>Create project</button>
+        ) : (
+          <a href="#projects"><span><Icon name="briefcase" width={20} height={20} /></span>View projects</a>
+        )}
+        <a href="#my-tasks"><span><Icon name="check-square" width={20} height={20} /></span>Review work</a>
+        <Link href={peoplePath}><span><Icon name="users" width={20} height={20} /></span>Manage people</Link>
+        {canViewAudit ? (
+          <Link href={auditPath}><span><Icon name="activity" width={20} height={20} /></span>Audit logs</Link>
+        ) : (
+          <button onClick={onNotifications} type="button"><span><Icon name="bell" width={20} height={20} /></span>Notifications</button>
+        )}
+      </div>
+    </section>
   );
 }

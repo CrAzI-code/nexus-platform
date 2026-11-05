@@ -5,6 +5,7 @@ export type FileAttachment = {
   originalName: string;
   mimeType: string;
   sizeBytes: number;
+  scanStatus: "CLEAN" | "UNSCANNED";
   uploadedAt: string;
   uploaderName: string;
   canPreview: boolean;
@@ -17,6 +18,26 @@ export type FileAttachmentPage = {
   pageSize: number;
   hasMore: boolean;
   canUpload: boolean;
+};
+
+export type OrganizationFile = FileAttachment & {
+  projectName: string;
+  taskTitle: string | null;
+};
+
+export type OrganizationFileFilters = {
+  page: number;
+  search?: string;
+  type?: "images" | "documents" | "text";
+  scanStatus?: "CLEAN" | "UNSCANNED";
+  sort?: "recent" | "name" | "size";
+};
+
+export type OrganizationFilePage = {
+  items: OrganizationFile[];
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
 };
 
 export type UploadProgress = (percentage: number) => void;
@@ -49,6 +70,7 @@ function isFileAttachment(value: unknown): value is FileAttachment {
     typeof value.sizeBytes === "number" &&
     Number.isSafeInteger(value.sizeBytes) &&
     value.sizeBytes > 0 &&
+    (value.scanStatus === "CLEAN" || value.scanStatus === "UNSCANNED") &&
     typeof value.uploadedAt === "string" &&
     typeof value.uploaderName === "string" &&
     typeof value.canPreview === "boolean" &&
@@ -68,6 +90,28 @@ function isFilePage(value: unknown): value is FileAttachmentPage {
   );
 }
 
+function isOrganizationFile(value: unknown): value is OrganizationFile {
+  return (
+    isRecord(value) &&
+    typeof value.projectName === "string" &&
+    (typeof value.taskTitle === "string" || value.taskTitle === null) &&
+    isFileAttachment(value)
+  );
+}
+
+function isOrganizationFilePage(
+  value: unknown,
+): value is OrganizationFilePage {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.items) &&
+    value.items.every(isOrganizationFile) &&
+    typeof value.page === "number" &&
+    typeof value.pageSize === "number" &&
+    typeof value.hasMore === "boolean"
+  );
+}
+
 function errorMessage(status: number): string {
   if (status === 400) {
     return "The file request was invalid. Check the file type and try again.";
@@ -79,6 +123,9 @@ function errorMessage(status: number): string {
   if (status === 404) return "This file or project is no longer available.";
   if (status === 409) return "The project or task can no longer accept file changes.";
   if (status === 413) return "This file is larger than the upload limit.";
+  if (status === 503) {
+    return "File storage or security scanning is temporarily unavailable.";
+  }
   return "We couldn’t complete the file request. Please try again.";
 }
 
@@ -117,6 +164,37 @@ async function readFilePage(response: Response): Promise<FileAttachmentPage> {
   const payload: unknown = await response.json();
   if (!isFilePage(payload)) {
     throw new Error("The server returned an unexpected file list.");
+  }
+  return payload;
+}
+
+export async function listOrganizationFiles(
+  token: string,
+  organizationId: string,
+  filters: OrganizationFileFilters,
+): Promise<OrganizationFilePage> {
+  const query = new URLSearchParams({
+    page: String(filters.page),
+    pageSize: String(pageSize),
+  });
+  if (filters.search) query.set("search", filters.search);
+  if (filters.type) query.set("type", filters.type);
+  if (filters.scanStatus) query.set("scanStatus", filters.scanStatus);
+  if (filters.sort) query.set("sort", filters.sort);
+
+  const response = await fetchApi(
+    `/organizations/${encodeURIComponent(organizationId)}/files?${query}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    throw new FileApiError(errorMessage(response.status), response.status);
+  }
+  const payload: unknown = await response.json();
+  if (!isOrganizationFilePage(payload)) {
+    throw new Error("The server returned an unexpected organization file list.");
   }
   return payload;
 }

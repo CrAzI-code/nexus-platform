@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import TaskDetailsPage from "./task-details";
 
+export const instant = false;
+
 type TaskPageProps = {
   params: Promise<{
     organizationId: string;

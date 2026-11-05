@@ -77,9 +77,7 @@ async function getResponseError(response: Response): Promise<Error> {
   return new Error("We couldn’t complete that request. Please try again.");
 }
 
-function isOrganizationProject(
-  value: unknown,
-): value is OrganizationProject {
+function isOrganizationProject(value: unknown): value is OrganizationProject {
   if (typeof value !== "object" || value === null) return false;
   return (
     "id" in value &&
@@ -147,7 +145,9 @@ async function readProject(response: Response): Promise<OrganizationProject> {
 async function readProjectMembers(response: Response): Promise<ProjectMembers> {
   const result: unknown = await response.json();
   if (!isProjectMembers(result)) {
-    throw new Error("The server returned an unexpected project members response.");
+    throw new Error(
+      "The server returned an unexpected project members response.",
+    );
   }
   return result;
 }
@@ -162,6 +162,31 @@ export async function listOrganizations(
 
   const result: unknown = await response.json();
   if (!Array.isArray(result) || !result.every(isOrganization)) {
+    throw new Error("The server returned an unexpected organization response.");
+  }
+  return result;
+}
+
+export async function updateOrganizationName(
+  token: string,
+  organizationId: string,
+  name: string,
+): Promise<OrganizationMembership> {
+  const response = await fetch(
+    `${apiBaseUrl}/organizations/${encodeURIComponent(organizationId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name }),
+    },
+  );
+  if (!response.ok) throw await getResponseError(response);
+
+  const result: unknown = await response.json();
+  if (!isOrganization(result)) {
     throw new Error("The server returned an unexpected organization response.");
   }
   return result;
@@ -306,7 +331,9 @@ export async function addProjectMember(
   if (!response.ok) throw await getResponseError(response);
   const result: unknown = await response.json();
   if (!isProjectMember(result)) {
-    throw new Error("The server returned an unexpected project member response.");
+    throw new Error(
+      "The server returned an unexpected project member response.",
+    );
   }
   return result;
 }

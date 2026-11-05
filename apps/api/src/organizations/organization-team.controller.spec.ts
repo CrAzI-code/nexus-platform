@@ -29,10 +29,13 @@ describe('Organization team controllers', () => {
   const team = {
     getTeam: vi.fn(),
     invite: vi.fn(),
+    resendInvitation: vi.fn(),
     revokeInvitation: vi.fn(),
     updateMemberRole: vi.fn(),
     removeMember: vi.fn(),
     acceptInvitation: vi.fn(),
+    declineInvitation: vi.fn(),
+    declineInvitationById: vi.fn(),
   };
   const email = { sendOrganizationInvitation: vi.fn() };
 
@@ -58,6 +61,18 @@ describe('Organization team controllers', () => {
       invitationToken: 'a'.repeat(64),
       organizationName: 'Acme Studio',
     });
+    team.resendInvitation.mockResolvedValue({
+      invitation: {
+        id: memberId,
+        email: 'invitee@example.com',
+        role: 'MEMBER',
+        status: 'PENDING',
+        expiresAt: '2026-11-09T00:00:00.000Z',
+        createdAt: '2026-11-02T00:00:00.000Z',
+      },
+      invitationToken: 'b'.repeat(64),
+      organizationName: 'Acme Studio',
+    });
     email.sendOrganizationInvitation.mockResolvedValue('sent');
     team.revokeInvitation.mockResolvedValue({});
     team.updateMemberRole.mockResolvedValue({});
@@ -66,6 +81,14 @@ describe('Organization team controllers', () => {
       organizationId,
       organizationName: 'Acme Studio',
       role: 'MEMBER',
+    });
+    team.declineInvitation.mockResolvedValue({
+      organizationId,
+      status: 'DECLINED',
+    });
+    team.declineInvitationById.mockResolvedValue({
+      organizationId,
+      status: 'DECLINED',
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -224,6 +247,30 @@ describe('Organization team controllers', () => {
     );
   });
 
+  it('resends a pending invitation with a rotated one-time token', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/organizations/${organizationId}/invitations/${memberId}/resend`,
+      )
+      .set('Authorization', 'Bearer test-token');
+
+    expect(clerkAuth.authenticate).toHaveBeenCalled();
+    expect(response.status, response.text).toBe(201);
+    expect(team.resendInvitation).toHaveBeenCalledWith(
+      organizationId,
+      memberId,
+      user.id,
+    );
+    expect(email.sendOrganizationInvitation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientEmail: 'invitee@example.com',
+        invitationToken: 'b'.repeat(64),
+      }),
+    );
+    expect(response.body.invitationToken).toBe('b'.repeat(64));
+    expect(response.body.invitation).not.toHaveProperty('tokenHash');
+  });
+
   it('rejects malformed invitation IDs before calling the service', async () => {
     await request(app.getHttpServer())
       .delete(
@@ -254,6 +301,34 @@ describe('Organization team controllers', () => {
 
     expect(team.acceptInvitation).toHaveBeenCalledWith(
       'a'.repeat(64),
+      user.id,
+      user.email,
+      true,
+    );
+  });
+
+  it('declines token and notification-linked invitations for the authenticated user', async () => {
+    const tokenResponse = await request(app.getHttpServer())
+      .post('/invitations/decline')
+      .set('Authorization', 'Bearer test-token')
+      .send({ token: 'a'.repeat(64) });
+    expect(clerkAuth.authenticate).toHaveBeenCalled();
+    expect(tokenResponse.status, tokenResponse.text).toBe(201);
+    expect(tokenResponse.body).toEqual({ organizationId, status: 'DECLINED' });
+
+    const idResponse = await request(app.getHttpServer())
+      .post(`/invitations/${memberId}/decline`)
+      .set('Authorization', 'Bearer test-token');
+    expect(idResponse.status, idResponse.text).toBe(201);
+
+    expect(team.declineInvitation).toHaveBeenCalledWith(
+      'a'.repeat(64),
+      user.id,
+      user.email,
+      true,
+    );
+    expect(team.declineInvitationById).toHaveBeenCalledWith(
+      memberId,
       user.id,
       user.email,
       true,

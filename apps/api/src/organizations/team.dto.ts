@@ -20,7 +20,8 @@ export class UpdateMemberRoleDto {
 
 type RequestBody = Record<string, unknown>;
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+const emailPattern =
+  /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/iu;
 const invitationRoles = ['ADMIN', 'MANAGER', 'MEMBER'] as const;
 const memberRoles = ['ADMIN', 'MANAGER', 'MEMBER'] as const;
 
@@ -43,7 +44,15 @@ function readEmail(value: unknown): string {
     throw new BadRequestException('A valid email address is required.');
   }
   const email = value.trim().toLowerCase();
-  if (email.length > 254 || !emailPattern.test(email)) {
+  const [localPart, domain] = email.split('@');
+  if (
+    email.length > 254 ||
+    !localPart ||
+    localPart.length > 64 ||
+    !domain ||
+    domain.length > 253 ||
+    !emailPattern.test(email)
+  ) {
     throw new BadRequestException('Enter a valid email address.');
   }
   return email;

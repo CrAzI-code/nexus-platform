@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import {
   acceptOrganizationInvitation,
   acceptOrganizationInvitationById,
+  declineOrganizationInvitation,
+  declineOrganizationInvitationById,
   getInvitationAcceptanceDetails,
   type InvitationAcceptanceDetails,
 } from "@/lib/team";
@@ -27,6 +29,8 @@ export default function AcceptInvitation() {
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [isDeclining, setIsDeclining] = useState(false);
+  const [isDeclined, setIsDeclined] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -122,7 +126,7 @@ export default function AcceptInvitation() {
       } else {
         throw new Error("This invitation link is invalid or has already been used.");
       }
-      if (invitationToken) window.sessionStorage.removeItem(pendingTokenKey);
+      window.sessionStorage.removeItem(pendingTokenKey);
       router.replace(
         `/organizations/${encodeURIComponent(result.organizationId)}/members`,
       );
@@ -134,6 +138,36 @@ export default function AcceptInvitation() {
       );
     } finally {
       setIsAccepting(false);
+    }
+  }
+
+  async function decline() {
+    if (!invitationToken && !invitationId) {
+      setError("This invitation link is invalid or has already been used.");
+      return;
+    }
+    setError(null);
+    setIsDeclining(true);
+    try {
+      const sessionToken = await getToken();
+      if (!sessionToken) {
+        throw new Error("Sign in to decline this invitation.");
+      }
+      if (invitationId) {
+        await declineOrganizationInvitationById(sessionToken, invitationId);
+      } else if (invitationToken) {
+        await declineOrganizationInvitation(sessionToken, invitationToken);
+      }
+      window.sessionStorage.removeItem(pendingTokenKey);
+      setIsDeclined(true);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "We couldn’t decline this invitation. Please try again.",
+      );
+    } finally {
+      setIsDeclining(false);
     }
   }
 
@@ -161,6 +195,10 @@ export default function AcceptInvitation() {
         invitationId === undefined ? (
           <p className="invitation-accept-status" aria-live="polite">
             Checking your invitation…
+          </p>
+        ) : isDeclined ? (
+          <p className="invitation-accept-status" role="status">
+            Invitation declined. You can close this page.
           </p>
         ) : !hasInvitation ? (
           <p className="onboarding-error" role="alert">
@@ -196,14 +234,24 @@ export default function AcceptInvitation() {
                 {new Date(invitationDetails.expiresAt).toLocaleDateString()}
               </p>
             )}
-            <button
-              className="onboarding-submit"
-              disabled={isAccepting || isDetailsLoading}
-              onClick={() => void accept()}
-              type="button"
-            >
-              {isAccepting ? "Accepting invitation…" : "Accept invitation"}
-            </button>
+            <div className="invitation-response-actions">
+              <button
+                className="onboarding-submit"
+                disabled={isAccepting || isDeclining || isDetailsLoading}
+                onClick={() => void accept()}
+                type="button"
+              >
+                {isAccepting ? "Accepting invitation…" : "Accept invitation"}
+              </button>
+              <button
+                className="invitation-decline-button"
+                disabled={isAccepting || isDeclining || isDetailsLoading}
+                onClick={() => void decline()}
+                type="button"
+              >
+                {isDeclining ? "Declining invitation…" : "Decline invitation"}
+              </button>
+            </div>
           </>
         )}
       </section>

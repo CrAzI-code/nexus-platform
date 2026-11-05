@@ -13,6 +13,24 @@ describe('FileListPipe', () => {
     });
   });
 
+  it('accepts supported search, type, scan, and sort filters', () => {
+    expect(
+      pipe.transform({
+        search: '  budget ',
+        type: 'documents',
+        scanStatus: 'UNSCANNED',
+        sort: 'name',
+      }),
+    ).toEqual({
+      page: 1,
+      pageSize: 25,
+      search: 'budget',
+      type: 'documents',
+      scanStatus: 'UNSCANNED',
+      sort: 'name',
+    });
+  });
+
   it('rejects repeated, unknown, and out-of-range options', () => {
     expect(() => pipe.transform({ page: ['1', '2'] })).toThrow(
       BadRequestException,
@@ -21,6 +39,13 @@ describe('FileListPipe', () => {
       BadRequestException,
     );
     expect(() => pipe.transform({ pageSize: '101' })).toThrow(
+      BadRequestException,
+    );
+    expect(() => pipe.transform({ type: 'all' })).toThrow(BadRequestException);
+    expect(() => pipe.transform({ sort: 'arbitrary' })).toThrow(
+      BadRequestException,
+    );
+    expect(() => pipe.transform({ search: 'x'.repeat(101) })).toThrow(
       BadRequestException,
     );
   });

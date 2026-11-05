@@ -19,7 +19,22 @@ describe('AuditLogListPipe', () => {
       actorId: '00000000-0000-4000-8000-000000000001',
       from: new Date('2026-11-01T00:00:00.000Z'),
     });
+
   });
+
+  it.each(['TASK_BLOCKED', 'TASK_UNBLOCKED'] as const)(
+    'allows filtering task blocker action %s',
+    (action) => {
+      expect(pipe.transform({ action })).toMatchObject({ action });
+    },
+  );
+
+  it.each(['INVITATION_RESENT', 'INVITATION_DECLINED'] as const)(
+    'allows filtering invitation lifecycle action %s',
+    (action) => {
+      expect(pipe.transform({ action })).toMatchObject({ action });
+    },
+  );
 
   it.each([
     { action: 'UNKNOWN' },

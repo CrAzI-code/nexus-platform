@@ -194,6 +194,12 @@ export type UserWhereInput = {
   memberships?: Prisma.OrganizationMembershipListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   auditLogs?: Prisma.AuditLogListRelationFilter
+  blockersCreated?: Prisma.TaskBlockerListRelationFilter
+  blockersResolved?: Prisma.TaskBlockerListRelationFilter
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionListRelationFilter
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageListRelationFilter
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadListRelationFilter
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -207,6 +213,12 @@ export type UserOrderByWithRelationInput = {
   memberships?: Prisma.OrganizationMembershipOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
   auditLogs?: Prisma.AuditLogOrderByRelationAggregateInput
+  blockersCreated?: Prisma.TaskBlockerOrderByRelationAggregateInput
+  blockersResolved?: Prisma.TaskBlockerOrderByRelationAggregateInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionOrderByRelationAggregateInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageOrderByRelationAggregateInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadOrderByRelationAggregateInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -223,6 +235,12 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   memberships?: Prisma.OrganizationMembershipListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   auditLogs?: Prisma.AuditLogListRelationFilter
+  blockersCreated?: Prisma.TaskBlockerListRelationFilter
+  blockersResolved?: Prisma.TaskBlockerListRelationFilter
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionListRelationFilter
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageListRelationFilter
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadListRelationFilter
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationListRelationFilter
 }, "id">
 
 export type UserOrderByWithAggregationInput = {
@@ -260,6 +278,12 @@ export type UserCreateInput = {
   memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -273,6 +297,12 @@ export type UserUncheckedCreateInput = {
   memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUpdateInput = {
@@ -286,6 +316,12 @@ export type UserUpdateInput = {
   memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -299,6 +335,12 @@ export type UserUncheckedUpdateInput = {
   memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -360,6 +402,11 @@ export type UserScalarRelationFilter = {
   isNot?: Prisma.UserWhereInput
 }
 
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
 }
@@ -400,6 +447,92 @@ export type UserUpdateOneRequiredWithoutMembershipsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMembershipsInput, Prisma.UserUpdateWithoutMembershipsInput>, Prisma.UserUncheckedUpdateWithoutMembershipsInput>
 }
 
+export type UserCreateNestedOneWithoutWorkflowAutomationsCreatedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutWorkflowAutomationsCreatedInput, Prisma.UserUncheckedCreateWithoutWorkflowAutomationsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutWorkflowAutomationsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutWorkflowAutomationsCreatedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutWorkflowAutomationsCreatedInput, Prisma.UserUncheckedCreateWithoutWorkflowAutomationsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutWorkflowAutomationsCreatedInput
+  upsert?: Prisma.UserUpsertWithoutWorkflowAutomationsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutWorkflowAutomationsCreatedInput, Prisma.UserUpdateWithoutWorkflowAutomationsCreatedInput>, Prisma.UserUncheckedUpdateWithoutWorkflowAutomationsCreatedInput>
+}
+
+export type UserCreateNestedOneWithoutProjectDiscussionsCreatedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionsCreatedInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutProjectDiscussionsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutProjectDiscussionsCreatedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionsCreatedInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutProjectDiscussionsCreatedInput
+  upsert?: Prisma.UserUpsertWithoutProjectDiscussionsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutProjectDiscussionsCreatedInput, Prisma.UserUpdateWithoutProjectDiscussionsCreatedInput>, Prisma.UserUncheckedUpdateWithoutProjectDiscussionsCreatedInput>
+}
+
+export type UserCreateNestedOneWithoutProjectDiscussionMessagesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionMessagesInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutProjectDiscussionMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutProjectDiscussionMessagesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionMessagesInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionMessagesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutProjectDiscussionMessagesInput
+  upsert?: Prisma.UserUpsertWithoutProjectDiscussionMessagesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutProjectDiscussionMessagesInput, Prisma.UserUpdateWithoutProjectDiscussionMessagesInput>, Prisma.UserUncheckedUpdateWithoutProjectDiscussionMessagesInput>
+}
+
+export type UserCreateNestedOneWithoutProjectDiscussionReadsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionReadsInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionReadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutProjectDiscussionReadsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutProjectDiscussionReadsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionReadsInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionReadsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutProjectDiscussionReadsInput
+  upsert?: Prisma.UserUpsertWithoutProjectDiscussionReadsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutProjectDiscussionReadsInput, Prisma.UserUpdateWithoutProjectDiscussionReadsInput>, Prisma.UserUncheckedUpdateWithoutProjectDiscussionReadsInput>
+}
+
+export type UserCreateNestedOneWithoutBlockersCreatedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlockersCreatedInput, Prisma.UserUncheckedCreateWithoutBlockersCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlockersCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutBlockersResolvedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlockersResolvedInput, Prisma.UserUncheckedCreateWithoutBlockersResolvedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlockersResolvedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutBlockersCreatedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlockersCreatedInput, Prisma.UserUncheckedCreateWithoutBlockersCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlockersCreatedInput
+  upsert?: Prisma.UserUpsertWithoutBlockersCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutBlockersCreatedInput, Prisma.UserUpdateWithoutBlockersCreatedInput>, Prisma.UserUncheckedUpdateWithoutBlockersCreatedInput>
+}
+
+export type UserUpdateOneWithoutBlockersResolvedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutBlockersResolvedInput, Prisma.UserUncheckedCreateWithoutBlockersResolvedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutBlockersResolvedInput
+  upsert?: Prisma.UserUpsertWithoutBlockersResolvedInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutBlockersResolvedInput, Prisma.UserUpdateWithoutBlockersResolvedInput>, Prisma.UserUncheckedUpdateWithoutBlockersResolvedInput>
+}
+
 export type UserCreateNestedOneWithoutNotificationsInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutNotificationsInput, Prisma.UserUncheckedCreateWithoutNotificationsInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutNotificationsInput
@@ -438,6 +571,12 @@ export type UserCreateWithoutIdentitiesInput = {
   memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutIdentitiesInput = {
@@ -450,6 +589,12 @@ export type UserUncheckedCreateWithoutIdentitiesInput = {
   memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutIdentitiesInput = {
@@ -478,6 +623,12 @@ export type UserUpdateWithoutIdentitiesInput = {
   memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutIdentitiesInput = {
@@ -490,6 +641,12 @@ export type UserUncheckedUpdateWithoutIdentitiesInput = {
   memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutMembershipsInput = {
@@ -502,6 +659,12 @@ export type UserCreateWithoutMembershipsInput = {
   identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutMembershipsInput = {
@@ -514,6 +677,12 @@ export type UserUncheckedCreateWithoutMembershipsInput = {
   identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutMembershipsInput = {
@@ -542,6 +711,12 @@ export type UserUpdateWithoutMembershipsInput = {
   identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMembershipsInput = {
@@ -554,6 +729,540 @@ export type UserUncheckedUpdateWithoutMembershipsInput = {
   identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserCreateWithoutWorkflowAutomationsCreatedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutWorkflowAutomationsCreatedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutWorkflowAutomationsCreatedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutWorkflowAutomationsCreatedInput, Prisma.UserUncheckedCreateWithoutWorkflowAutomationsCreatedInput>
+}
+
+export type UserUpsertWithoutWorkflowAutomationsCreatedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutWorkflowAutomationsCreatedInput, Prisma.UserUncheckedUpdateWithoutWorkflowAutomationsCreatedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutWorkflowAutomationsCreatedInput, Prisma.UserUncheckedCreateWithoutWorkflowAutomationsCreatedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutWorkflowAutomationsCreatedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutWorkflowAutomationsCreatedInput, Prisma.UserUncheckedUpdateWithoutWorkflowAutomationsCreatedInput>
+}
+
+export type UserUpdateWithoutWorkflowAutomationsCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutWorkflowAutomationsCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutProjectDiscussionsCreatedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
+}
+
+export type UserUncheckedCreateWithoutProjectDiscussionsCreatedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
+}
+
+export type UserCreateOrConnectWithoutProjectDiscussionsCreatedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionsCreatedInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionsCreatedInput>
+}
+
+export type UserUpsertWithoutProjectDiscussionsCreatedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutProjectDiscussionsCreatedInput, Prisma.UserUncheckedUpdateWithoutProjectDiscussionsCreatedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionsCreatedInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionsCreatedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutProjectDiscussionsCreatedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutProjectDiscussionsCreatedInput, Prisma.UserUncheckedUpdateWithoutProjectDiscussionsCreatedInput>
+}
+
+export type UserUpdateWithoutProjectDiscussionsCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutProjectDiscussionsCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserCreateWithoutProjectDiscussionMessagesInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
+}
+
+export type UserUncheckedCreateWithoutProjectDiscussionMessagesInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
+}
+
+export type UserCreateOrConnectWithoutProjectDiscussionMessagesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionMessagesInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionMessagesInput>
+}
+
+export type UserUpsertWithoutProjectDiscussionMessagesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutProjectDiscussionMessagesInput, Prisma.UserUncheckedUpdateWithoutProjectDiscussionMessagesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionMessagesInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionMessagesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutProjectDiscussionMessagesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutProjectDiscussionMessagesInput, Prisma.UserUncheckedUpdateWithoutProjectDiscussionMessagesInput>
+}
+
+export type UserUpdateWithoutProjectDiscussionMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutProjectDiscussionMessagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserCreateWithoutProjectDiscussionReadsInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
+}
+
+export type UserUncheckedCreateWithoutProjectDiscussionReadsInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
+}
+
+export type UserCreateOrConnectWithoutProjectDiscussionReadsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionReadsInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionReadsInput>
+}
+
+export type UserUpsertWithoutProjectDiscussionReadsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutProjectDiscussionReadsInput, Prisma.UserUncheckedUpdateWithoutProjectDiscussionReadsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutProjectDiscussionReadsInput, Prisma.UserUncheckedCreateWithoutProjectDiscussionReadsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutProjectDiscussionReadsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutProjectDiscussionReadsInput, Prisma.UserUncheckedUpdateWithoutProjectDiscussionReadsInput>
+}
+
+export type UserUpdateWithoutProjectDiscussionReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutProjectDiscussionReadsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserCreateWithoutBlockersCreatedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
+}
+
+export type UserUncheckedCreateWithoutBlockersCreatedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
+}
+
+export type UserCreateOrConnectWithoutBlockersCreatedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlockersCreatedInput, Prisma.UserUncheckedCreateWithoutBlockersCreatedInput>
+}
+
+export type UserCreateWithoutBlockersResolvedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
+}
+
+export type UserUncheckedCreateWithoutBlockersResolvedInput = {
+  id?: string
+  name: string
+  email: string
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
+  memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
+}
+
+export type UserCreateOrConnectWithoutBlockersResolvedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlockersResolvedInput, Prisma.UserUncheckedCreateWithoutBlockersResolvedInput>
+}
+
+export type UserUpsertWithoutBlockersCreatedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutBlockersCreatedInput, Prisma.UserUncheckedUpdateWithoutBlockersCreatedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlockersCreatedInput, Prisma.UserUncheckedCreateWithoutBlockersCreatedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutBlockersCreatedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutBlockersCreatedInput, Prisma.UserUncheckedUpdateWithoutBlockersCreatedInput>
+}
+
+export type UserUpdateWithoutBlockersCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutBlockersCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserUpsertWithoutBlockersResolvedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutBlockersResolvedInput, Prisma.UserUncheckedUpdateWithoutBlockersResolvedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutBlockersResolvedInput, Prisma.UserUncheckedCreateWithoutBlockersResolvedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutBlockersResolvedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutBlockersResolvedInput, Prisma.UserUncheckedUpdateWithoutBlockersResolvedInput>
+}
+
+export type UserUpdateWithoutBlockersResolvedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutBlockersResolvedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
+  memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutNotificationsInput = {
@@ -566,6 +1275,12 @@ export type UserCreateWithoutNotificationsInput = {
   identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
   memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -578,6 +1293,12 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
   memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
   auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -606,6 +1327,12 @@ export type UserUpdateWithoutNotificationsInput = {
   identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
   memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -618,6 +1345,12 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
   memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
   auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserCreateWithoutAuditLogsInput = {
@@ -630,6 +1363,12 @@ export type UserCreateWithoutAuditLogsInput = {
   identities?: Prisma.AuthIdentityCreateNestedManyWithoutUserInput
   memberships?: Prisma.OrganizationMembershipCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutRecipientInput
+  blockersCreated?: Prisma.TaskBlockerCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationCreateNestedManyWithoutCreatorInput
 }
 
 export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -642,6 +1381,12 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   identities?: Prisma.AuthIdentityUncheckedCreateNestedManyWithoutUserInput
   memberships?: Prisma.OrganizationMembershipUncheckedCreateNestedManyWithoutUserInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutRecipientInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutCreatorInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedCreateNestedManyWithoutResolverInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutCreatorInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedCreateNestedManyWithoutAuthorInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedCreateNestedManyWithoutUserInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutCreatorInput
 }
 
 export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -670,6 +1415,12 @@ export type UserUpdateWithoutAuditLogsInput = {
   identities?: Prisma.AuthIdentityUpdateManyWithoutUserNestedInput
   memberships?: Prisma.OrganizationMembershipUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutRecipientNestedInput
+  blockersCreated?: Prisma.TaskBlockerUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUpdateManyWithoutCreatorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -682,6 +1433,12 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   identities?: Prisma.AuthIdentityUncheckedUpdateManyWithoutUserNestedInput
   memberships?: Prisma.OrganizationMembershipUncheckedUpdateManyWithoutUserNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutRecipientNestedInput
+  blockersCreated?: Prisma.TaskBlockerUncheckedUpdateManyWithoutCreatorNestedInput
+  blockersResolved?: Prisma.TaskBlockerUncheckedUpdateManyWithoutResolverNestedInput
+  projectDiscussionsCreated?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutCreatorNestedInput
+  projectDiscussionMessages?: Prisma.ProjectDiscussionMessageUncheckedUpdateManyWithoutAuthorNestedInput
+  projectDiscussionReads?: Prisma.ProjectDiscussionReadUncheckedUpdateManyWithoutUserNestedInput
+  workflowAutomationsCreated?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutCreatorNestedInput
 }
 
 
@@ -694,6 +1451,12 @@ export type UserCountOutputType = {
   memberships: number
   notifications: number
   auditLogs: number
+  blockersCreated: number
+  blockersResolved: number
+  projectDiscussionsCreated: number
+  projectDiscussionMessages: number
+  projectDiscussionReads: number
+  workflowAutomationsCreated: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -701,6 +1464,12 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   memberships?: boolean | UserCountOutputTypeCountMembershipsArgs
   notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
   auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
+  blockersCreated?: boolean | UserCountOutputTypeCountBlockersCreatedArgs
+  blockersResolved?: boolean | UserCountOutputTypeCountBlockersResolvedArgs
+  projectDiscussionsCreated?: boolean | UserCountOutputTypeCountProjectDiscussionsCreatedArgs
+  projectDiscussionMessages?: boolean | UserCountOutputTypeCountProjectDiscussionMessagesArgs
+  projectDiscussionReads?: boolean | UserCountOutputTypeCountProjectDiscussionReadsArgs
+  workflowAutomationsCreated?: boolean | UserCountOutputTypeCountWorkflowAutomationsCreatedArgs
 }
 
 /**
@@ -741,6 +1510,48 @@ export type UserCountOutputTypeCountAuditLogsArgs<ExtArgs extends runtime.Types.
   where?: Prisma.AuditLogWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountBlockersCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TaskBlockerWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountBlockersResolvedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TaskBlockerWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountProjectDiscussionsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProjectDiscussionWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountProjectDiscussionMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProjectDiscussionMessageWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountProjectDiscussionReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProjectDiscussionReadWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountWorkflowAutomationsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WorkflowAutomationWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -753,6 +1564,12 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   memberships?: boolean | Prisma.User$membershipsArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   auditLogs?: boolean | Prisma.User$auditLogsArgs<ExtArgs>
+  blockersCreated?: boolean | Prisma.User$blockersCreatedArgs<ExtArgs>
+  blockersResolved?: boolean | Prisma.User$blockersResolvedArgs<ExtArgs>
+  projectDiscussionsCreated?: boolean | Prisma.User$projectDiscussionsCreatedArgs<ExtArgs>
+  projectDiscussionMessages?: boolean | Prisma.User$projectDiscussionMessagesArgs<ExtArgs>
+  projectDiscussionReads?: boolean | Prisma.User$projectDiscussionReadsArgs<ExtArgs>
+  workflowAutomationsCreated?: boolean | Prisma.User$workflowAutomationsCreatedArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -789,6 +1606,12 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   memberships?: boolean | Prisma.User$membershipsArgs<ExtArgs>
   notifications?: boolean | Prisma.User$notificationsArgs<ExtArgs>
   auditLogs?: boolean | Prisma.User$auditLogsArgs<ExtArgs>
+  blockersCreated?: boolean | Prisma.User$blockersCreatedArgs<ExtArgs>
+  blockersResolved?: boolean | Prisma.User$blockersResolvedArgs<ExtArgs>
+  projectDiscussionsCreated?: boolean | Prisma.User$projectDiscussionsCreatedArgs<ExtArgs>
+  projectDiscussionMessages?: boolean | Prisma.User$projectDiscussionMessagesArgs<ExtArgs>
+  projectDiscussionReads?: boolean | Prisma.User$projectDiscussionReadsArgs<ExtArgs>
+  workflowAutomationsCreated?: boolean | Prisma.User$workflowAutomationsCreatedArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -801,6 +1624,12 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     memberships: Prisma.$OrganizationMembershipPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
     auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
+    blockersCreated: Prisma.$TaskBlockerPayload<ExtArgs>[]
+    blockersResolved: Prisma.$TaskBlockerPayload<ExtArgs>[]
+    projectDiscussionsCreated: Prisma.$ProjectDiscussionPayload<ExtArgs>[]
+    projectDiscussionMessages: Prisma.$ProjectDiscussionMessagePayload<ExtArgs>[]
+    projectDiscussionReads: Prisma.$ProjectDiscussionReadPayload<ExtArgs>[]
+    workflowAutomationsCreated: Prisma.$WorkflowAutomationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1207,6 +2036,12 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   memberships<T extends Prisma.User$membershipsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$membershipsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrganizationMembershipPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.User$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   auditLogs<T extends Prisma.User$auditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  blockersCreated<T extends Prisma.User$blockersCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$blockersCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskBlockerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  blockersResolved<T extends Prisma.User$blockersResolvedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$blockersResolvedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskBlockerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  projectDiscussionsCreated<T extends Prisma.User$projectDiscussionsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$projectDiscussionsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectDiscussionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  projectDiscussionMessages<T extends Prisma.User$projectDiscussionMessagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$projectDiscussionMessagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectDiscussionMessagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  projectDiscussionReads<T extends Prisma.User$projectDiscussionReadsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$projectDiscussionReadsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectDiscussionReadPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  workflowAutomationsCreated<T extends Prisma.User$workflowAutomationsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$workflowAutomationsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkflowAutomationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1728,6 +2563,150 @@ export type User$auditLogsArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.AuditLogScalarFieldEnum | Prisma.AuditLogScalarFieldEnum[]
+}
+
+/**
+ * User.blockersCreated
+ */
+export type User$blockersCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TaskBlocker
+   */
+  select?: Prisma.TaskBlockerSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TaskBlocker
+   */
+  omit?: Prisma.TaskBlockerOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TaskBlockerInclude<ExtArgs> | null
+  where?: Prisma.TaskBlockerWhereInput
+  orderBy?: Prisma.TaskBlockerOrderByWithRelationInput | Prisma.TaskBlockerOrderByWithRelationInput[]
+  cursor?: Prisma.TaskBlockerWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TaskBlockerScalarFieldEnum | Prisma.TaskBlockerScalarFieldEnum[]
+}
+
+/**
+ * User.blockersResolved
+ */
+export type User$blockersResolvedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TaskBlocker
+   */
+  select?: Prisma.TaskBlockerSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TaskBlocker
+   */
+  omit?: Prisma.TaskBlockerOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TaskBlockerInclude<ExtArgs> | null
+  where?: Prisma.TaskBlockerWhereInput
+  orderBy?: Prisma.TaskBlockerOrderByWithRelationInput | Prisma.TaskBlockerOrderByWithRelationInput[]
+  cursor?: Prisma.TaskBlockerWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TaskBlockerScalarFieldEnum | Prisma.TaskBlockerScalarFieldEnum[]
+}
+
+/**
+ * User.projectDiscussionsCreated
+ */
+export type User$projectDiscussionsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProjectDiscussion
+   */
+  select?: Prisma.ProjectDiscussionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProjectDiscussion
+   */
+  omit?: Prisma.ProjectDiscussionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProjectDiscussionInclude<ExtArgs> | null
+  where?: Prisma.ProjectDiscussionWhereInput
+  orderBy?: Prisma.ProjectDiscussionOrderByWithRelationInput | Prisma.ProjectDiscussionOrderByWithRelationInput[]
+  cursor?: Prisma.ProjectDiscussionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProjectDiscussionScalarFieldEnum | Prisma.ProjectDiscussionScalarFieldEnum[]
+}
+
+/**
+ * User.projectDiscussionMessages
+ */
+export type User$projectDiscussionMessagesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProjectDiscussionMessage
+   */
+  select?: Prisma.ProjectDiscussionMessageSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProjectDiscussionMessage
+   */
+  omit?: Prisma.ProjectDiscussionMessageOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProjectDiscussionMessageInclude<ExtArgs> | null
+  where?: Prisma.ProjectDiscussionMessageWhereInput
+  orderBy?: Prisma.ProjectDiscussionMessageOrderByWithRelationInput | Prisma.ProjectDiscussionMessageOrderByWithRelationInput[]
+  cursor?: Prisma.ProjectDiscussionMessageWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProjectDiscussionMessageScalarFieldEnum | Prisma.ProjectDiscussionMessageScalarFieldEnum[]
+}
+
+/**
+ * User.projectDiscussionReads
+ */
+export type User$projectDiscussionReadsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProjectDiscussionRead
+   */
+  select?: Prisma.ProjectDiscussionReadSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProjectDiscussionRead
+   */
+  omit?: Prisma.ProjectDiscussionReadOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProjectDiscussionReadInclude<ExtArgs> | null
+  where?: Prisma.ProjectDiscussionReadWhereInput
+  orderBy?: Prisma.ProjectDiscussionReadOrderByWithRelationInput | Prisma.ProjectDiscussionReadOrderByWithRelationInput[]
+  cursor?: Prisma.ProjectDiscussionReadWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProjectDiscussionReadScalarFieldEnum | Prisma.ProjectDiscussionReadScalarFieldEnum[]
+}
+
+/**
+ * User.workflowAutomationsCreated
+ */
+export type User$workflowAutomationsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkflowAutomation
+   */
+  select?: Prisma.WorkflowAutomationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkflowAutomation
+   */
+  omit?: Prisma.WorkflowAutomationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkflowAutomationInclude<ExtArgs> | null
+  where?: Prisma.WorkflowAutomationWhereInput
+  orderBy?: Prisma.WorkflowAutomationOrderByWithRelationInput | Prisma.WorkflowAutomationOrderByWithRelationInput[]
+  cursor?: Prisma.WorkflowAutomationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WorkflowAutomationScalarFieldEnum | Prisma.WorkflowAutomationScalarFieldEnum[]
 }
 
 /**

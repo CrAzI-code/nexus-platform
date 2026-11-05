@@ -63,6 +63,36 @@ export type TaskComment = Prisma.TaskCommentModel
  */
 export type TaskActivity = Prisma.TaskActivityModel
 /**
+ * Model WorkflowAutomation
+ *
+ */
+export type WorkflowAutomation = Prisma.WorkflowAutomationModel
+/**
+ * Model WorkflowAutomationExecution
+ *
+ */
+export type WorkflowAutomationExecution = Prisma.WorkflowAutomationExecutionModel
+/**
+ * Model ProjectDiscussion
+ *
+ */
+export type ProjectDiscussion = Prisma.ProjectDiscussionModel
+/**
+ * Model ProjectDiscussionMessage
+ *
+ */
+export type ProjectDiscussionMessage = Prisma.ProjectDiscussionMessageModel
+/**
+ * Model ProjectDiscussionRead
+ *
+ */
+export type ProjectDiscussionRead = Prisma.ProjectDiscussionReadModel
+/**
+ * Model TaskBlocker
+ *
+ */
+export type TaskBlocker = Prisma.TaskBlockerModel
+/**
  * Model FileAttachment
  *
  */

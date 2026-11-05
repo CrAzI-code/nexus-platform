@@ -10,8 +10,11 @@ import {
   archiveProjectTask,
   assignProjectTask,
   changeProjectTaskStatus,
+  createProjectTaskBlocker,
+  getTaskErrorMessage,
   getProjectTask,
   listTaskProjectMembers,
+  resolveProjectTaskBlocker,
   restoreProjectTask,
   updateProjectTask,
   type TaskDetails,
@@ -90,7 +93,10 @@ export default function TaskDetailsPage({
     (task?.canAssignOthers === true &&
       loadedMembers.key !== membersRequestKey);
   const canChange = Boolean(
-    task && task.archivedAt === null && task.projectStatus === "ACTIVE",
+    task &&
+      task.canParticipate &&
+      task.archivedAt === null &&
+      task.projectStatus === "ACTIVE",
   );
 
   useEffect(() => {
@@ -116,10 +122,10 @@ export default function TaskDetailsPage({
           setLoaded({
             key: requestKey,
             task: null,
-            error:
-              requestError instanceof Error
-                ? requestError.message
-                : "We couldn’t load this task. Please try again.",
+            error: getTaskErrorMessage(
+              requestError,
+              "We couldn’t load this task. Please try again.",
+            ),
           });
         }
       }
@@ -162,9 +168,10 @@ export default function TaskDetailsPage({
               requestError instanceof Error &&
               requestError.name === "TimeoutError"
                 ? "Loading assignees timed out. Check your connection and try again."
-                : requestError instanceof Error
-                ? requestError.message
-                : "We couldn’t load assignees. Please try again.",
+                : getTaskErrorMessage(
+                    requestError,
+                    "We couldn’t load assignees. Please try again.",
+                  ),
           });
         }
       }
@@ -205,9 +212,10 @@ export default function TaskDetailsPage({
       return true;
     } catch (requestError) {
       setActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : "We couldn’t update this task. Please try again.",
+        getTaskErrorMessage(
+          requestError,
+          "We couldn’t update this task. Please try again.",
+        ),
       );
       return false;
     } finally {
@@ -253,21 +261,63 @@ export default function TaskDetailsPage({
       setActionError("Add a short reason so your team knows what is blocking this.");
       return;
     }
+    if (status === "BLOCKED" && task?.activeBlocker) {
+      setActionError("This task already has an active blocker.");
+      return;
+    }
+    if (
+      task?.activeBlocker &&
+      status !== "BLOCKED" &&
+      !window.confirm("Resolve the active blocker and change this task’s status?")
+    ) {
+      return;
+    }
     void performAction(
       "status",
       (token) =>
-        changeProjectTaskStatus(
+        status === "BLOCKED"
+          ? createProjectTaskBlocker(
+              token,
+              organizationId,
+              projectId,
+              taskId,
+              blockerReason.trim(),
+            )
+          : changeProjectTaskStatus(
+              token,
+              organizationId,
+              projectId,
+              taskId,
+              status,
+            ),
+      status === "BLOCKED" ? "Task blocker recorded." : "Task status updated.",
+    ).then((saved) => {
+      if (saved) setBlockerReason("");
+    });
+  }
+
+  function resolveActiveBlocker() {
+    if (!task?.activeBlocker) return;
+    const blockerId = task.activeBlocker.id;
+    if (
+      !window.confirm(
+        "Resolve this blocker? The task will return to its previous status.",
+      )
+    ) {
+      return;
+    }
+    void performAction(
+      "resolve-blocker",
+      (token) =>
+        resolveProjectTaskBlocker(
           token,
           organizationId,
           projectId,
           taskId,
-          status,
-          status === "BLOCKED" ? blockerReason.trim() : undefined,
+          blockerId,
         ),
-      "Task status updated.",
-    ).then((saved) => {
-      if (saved) setBlockerReason("");
-    });
+      "Task blocker resolved.",
+    );
   }
 
   function changeAssignee(assigneeId: string | null) {
@@ -366,6 +416,29 @@ export default function TaskDetailsPage({
                 {task.description || "No description has been added."}
               </p>
 
+              {task.activeBlocker && (
+                <section className="task-active-blocker" aria-labelledby="active-blocker-title">
+                  <div>
+                    <h2 id="active-blocker-title">Blocked</h2>
+                    <p>{task.activeBlocker.reason}</p>
+                    <span>
+                      Reported by {displayAttributionName(task.activeBlocker.createdByName)}
+                      {" · "}{formatDate(task.activeBlocker.createdAt)}
+                    </span>
+                  </div>
+                  {canChange && (
+                    <button
+                      className="secondary-button"
+                      disabled={busyAction !== null}
+                      onClick={resolveActiveBlocker}
+                      type="button"
+                    >
+                      {busyAction === "resolve-blocker" ? "Resolving…" : "Resolve blocker"}
+                    </button>
+                  )}
+                </section>
+              )}
+
               {isEditing && (
                 <TaskEditForm
                   task={task}
@@ -426,10 +499,17 @@ export default function TaskDetailsPage({
                   )}
                   <button
                     className="secondary-button"
-                    disabled={!canChange || busyAction !== null}
+                    disabled={
+                      !canChange ||
+                      busyAction !== null ||
+                      (status === task.status &&
+                        !(status === "BLOCKED" && !task.activeBlocker))
+                    }
                     type="submit"
                   >
-                    Update status
+                    {status === "BLOCKED" && !task.activeBlocker
+                      ? "Record blocker"
+                      : "Update status"}
                   </button>
                 </form>
 
@@ -547,6 +627,37 @@ export default function TaskDetailsPage({
 
             <section className="project-details-card task-history-card">
               <div className="task-section-heading">
+                <div>
+                  <h2>Blocker history</h2>
+                  <p>Block and resolution events are retained for auditing.</p>
+                </div>
+              </div>
+              {task.blockerHistory.length > 0 ? (
+                <ol className="task-history-list">
+                  {task.blockerHistory.map((blocker) => (
+                    <li key={blocker.id}>
+                      <span className="task-history-dot blocker" />
+                      <div>
+                        <p>
+                          <strong>{displayAttributionName(blocker.createdByName)}</strong>
+                          {" blocked this task: "}{blocker.reason}
+                        </p>
+                        <time>{formatDate(blocker.createdAt)}</time>
+                        {blocker.resolvedAt && (
+                          <p className="task-blocker-resolution">
+                            Resolved by{" "}
+                            <strong>{displayAttributionName(blocker.resolvedByName ?? "")}</strong>
+                            {" · "}{formatDate(blocker.resolvedAt)}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="task-empty-note">No blockers have been recorded.</p>
+              )}
+              <div className="task-section-heading task-activity-heading">
                 <div>
                   <h2>Activity history</h2>
                   <p>Changes and updates are retained with this task.</p>

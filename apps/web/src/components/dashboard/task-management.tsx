@@ -172,6 +172,11 @@ export function TaskManagement({
                   {task.assignee ? `Assigned to ${task.assignee.name}` : "Unassigned"}
                   {task.archivedAt ? " · Archived" : ""}
                 </span>
+                {task.activeBlocker && (
+                  <span className="project-task-blocker">
+                    Blocked: {task.activeBlocker.reason}
+                  </span>
+                )}
               </span>
               <span className={`priority-badge ${task.priority.toLowerCase()}`}>
                 {priorityLabels[task.priority]}
