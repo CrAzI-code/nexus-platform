@@ -1,4 +1,8 @@
-import { ConflictException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma.service.js';
@@ -8,8 +12,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 describe('OrganizationsService', () => {
   let service: OrganizationsService;
   const transaction = {
-    organization: { create: vi.fn() },
-    organizationMembership: { create: vi.fn() },
+    organization: { create: vi.fn(), update: vi.fn() },
+    organizationMembership: { create: vi.fn(), findFirst: vi.fn() },
   };
   const prisma = {
     $transaction: vi.fn(),
@@ -23,8 +27,16 @@ describe('OrganizationsService', () => {
       name: 'Acme Studio',
       slug: 'acme-studio',
     });
+    transaction.organization.update.mockResolvedValue({
+      id: 'organization-id',
+      name: 'Updated Studio',
+      slug: 'acme-studio',
+    });
     transaction.organizationMembership.create.mockResolvedValue({
       role: 'OWNER',
+    });
+    transaction.organizationMembership.findFirst.mockResolvedValue({
+      role: 'ADMIN',
     });
     prisma.organizationMembership.findMany.mockResolvedValue([]);
     prisma.$transaction.mockImplementation(
@@ -84,8 +96,9 @@ describe('OrganizationsService', () => {
         slug: 'acme-studio-2',
       });
 
-    await expect(service.create('verified-user-id', 'Acme Studio')).resolves
-      .toMatchObject({ slug: 'acme-studio-2', role: 'OWNER' });
+    await expect(
+      service.create('verified-user-id', 'Acme Studio'),
+    ).resolves.toMatchObject({ slug: 'acme-studio-2', role: 'OWNER' });
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(transaction.organization.create).toHaveBeenNthCalledWith(2, {
@@ -155,5 +168,70 @@ describe('OrganizationsService', () => {
       service.create('verified-user-id', 'Acme Studio'),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.$transaction).toHaveBeenCalledTimes(20);
+  });
+
+  it('allows active Owners and Admins to update only the organization name', async () => {
+    for (const role of ['OWNER', 'ADMIN'] as const) {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+
+      await expect(
+        service.updateName(
+          'organization-id',
+          'verified-user-id',
+          'Updated Studio',
+        ),
+      ).resolves.toEqual({
+        id: 'organization-id',
+        name: 'Updated Studio',
+        slug: 'acme-studio',
+        role,
+      });
+    }
+
+    expect(
+      transaction.organizationMembership.findFirst,
+    ).toHaveBeenLastCalledWith({
+      where: {
+        organizationId: 'organization-id',
+        userId: 'verified-user-id',
+        status: 'ACTIVE',
+        organization: { status: 'ACTIVE' },
+      },
+      select: { role: true },
+    });
+    expect(transaction.organization.update).toHaveBeenLastCalledWith({
+      where: { id: 'organization-id', status: 'ACTIVE' },
+      data: { name: 'Updated Studio' },
+      select: { id: true, name: true, slug: true },
+    });
+  });
+
+  it('denies name updates to active Manager and Member roles', async () => {
+    for (const role of ['MANAGER', 'MEMBER'] as const) {
+      transaction.organizationMembership.findFirst.mockResolvedValue({ role });
+
+      await expect(
+        service.updateName(
+          'organization-id',
+          'verified-user-id',
+          'Updated Studio',
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    }
+
+    expect(transaction.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('does not update organizations without an active matching membership', async () => {
+    transaction.organizationMembership.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.updateName(
+        'other-organization',
+        'verified-user-id',
+        'Updated Studio',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transaction.organization.update).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
-export type DashboardAnchor = "home" | "my-tasks" | "projects" | "notifications";
+export type DashboardAnchor =
+  "home" | "my-tasks" | "projects" | "notifications";
 
 export function organizationDashboardPath(
   organizationId: string,
@@ -18,4 +19,8 @@ export function organizationAuditLogsPath(organizationId: string): string {
 
 export function organizationFilesPath(organizationId: string): string {
   return `/organizations/${encodeURIComponent(organizationId)}/files`;
+}
+
+export function organizationSettingsPath(organizationId: string): string {
+  return `/organizations/${encodeURIComponent(organizationId)}/settings`;
 }

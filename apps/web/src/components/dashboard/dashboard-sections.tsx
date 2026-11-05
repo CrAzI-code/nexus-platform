@@ -100,6 +100,7 @@ type ProjectsSectionProps = {
   onCreate: () => void;
   onEdit: (project: OrganizationProject) => void;
   onArchive: (project: OrganizationProject) => void;
+  onRestore: (project: OrganizationProject) => void;
   onRetry: () => void;
 };
 
@@ -114,6 +115,7 @@ export function ProjectsSection({
   onCreate,
   onEdit,
   onArchive,
+  onRestore,
   onRetry,
 }: ProjectsSectionProps) {
   const [showAll, setShowAll] = useState(false);
@@ -200,6 +202,13 @@ export function ProjectsSection({
                   </button>
                   <button className="text-button project-archive-action" onClick={() => onArchive(project)} type="button">
                     Archive
+                  </button>
+                </div>
+              )}
+              {project.canManage && project.status === "ARCHIVED" && (
+                <div className="project-actions">
+                  <button className="text-button" onClick={() => onRestore(project)} type="button">
+                    Restore
                   </button>
                 </div>
               )}

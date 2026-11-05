@@ -71,10 +71,36 @@ enum TaskActivityType {
   CREATED
   UPDATED
   STATUS_CHANGED
+  BLOCKER_CREATED
+  BLOCKER_RESOLVED
   ASSIGNEE_CHANGED
   COMMENT_ADDED
   ARCHIVED
   RESTORED
+  AUTOMATION
+}
+
+enum WorkflowAutomationTrigger {
+  TASK_CREATED
+  TASK_STATUS_CHANGED
+  TASK_ASSIGNED
+  TASK_DUE_DATE_APPROACHING
+  TASK_OVERDUE
+  TASK_BLOCKER_REPORTED
+  TASK_BLOCKER_RESOLVED
+}
+
+enum WorkflowAutomationAction {
+  SEND_NOTIFICATION
+  CHANGE_STATUS
+  ASSIGN_MEMBER
+}
+
+enum WorkflowAutomationExecutionStatus {
+  RUNNING
+  SUCCEEDED
+  SKIPPED
+  FAILED
 }
 
 enum InvitationStatus {
@@ -90,10 +116,16 @@ enum NotificationType {
   TASK_COMMENT
   TASK_MENTION
   TASK_STATUS_CHANGED
+  TASK_BLOCKED
+  TASK_UNBLOCKED
+  TASK_DUE_DATE
+  TASK_OVERDUE
   PROJECT_ADDED
   PROJECT_UPDATED
   ORGANIZATION_INVITATION
   TEAM_UPDATED
+  PROJECT_DISCUSSION_MESSAGE
+  WORKFLOW_AUTOMATION
 }
 
 enum NotificationResourceType {
@@ -120,6 +152,8 @@ enum AuditLogAction {
   TASK_ASSIGNED
   TASK_UPDATED
   TASK_STATUS_CHANGED
+  TASK_BLOCKED
+  TASK_UNBLOCKED
   TASK_ARCHIVED
   TASK_RESTORED
   FILE_UPLOADED
@@ -143,10 +177,16 @@ model User {
   createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
-  identities    AuthIdentity[]
-  memberships   OrganizationMembership[]
-  notifications Notification[]
-  auditLogs     AuditLog[]
+  identities       AuthIdentity[]
+  memberships      OrganizationMembership[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  blockersCreated  TaskBlocker[]            @relation("TaskBlockerCreator")
+  blockersResolved TaskBlocker[]            @relation("TaskBlockerResolver")
+  projectDiscussionsCreated ProjectDiscussion[]        @relation("ProjectDiscussionCreator")
+  projectDiscussionMessages ProjectDiscussionMessage[]  @relation("ProjectDiscussionMessageAuthor")
+  projectDiscussionReads    ProjectDiscussionRead[]
+  workflowAutomationsCreated WorkflowAutomation[] @relation("WorkflowAutomationCreator")
 
   @@map("users")
 }
@@ -219,6 +259,8 @@ model Project {
   tasks         Task[]
   notifications Notification[]
   files         FileAttachment[]
+  discussions   ProjectDiscussion[]
+  automations   WorkflowAutomation[]
 
   @@unique([organizationId, id])
   @@index([organizationId, status])
@@ -241,7 +283,8 @@ model ProjectMember {
   createdTasks   Task[]         @relation("TaskCreator")
   comments       TaskComment[]  @relation("TaskCommentAuthor")
   taskActivities TaskActivity[] @relation("TaskActivityActor")
-
+  workflowConditions WorkflowAutomation[] @relation("WorkflowAutomationConditionAssignee")
+  workflowAssignments WorkflowAutomation[] @relation("WorkflowAutomationActionAssignee")
   @@unique([organizationId, projectId, userId])
   @@index([organizationId, userId, status])
   @@map("project_members")
@@ -269,10 +312,13 @@ model Task {
   assignee        ProjectMember?       @relation("TaskAssignee", fields: [organizationId, projectId, assigneeId], references: [organizationId, projectId, userId], onDelete: Restrict)
   comments        TaskComment[]
   activities      TaskActivity[]
+  blockers        TaskBlocker[]
   fileAttachments TaskFileAttachment[]
+  automationExecutions WorkflowAutomationExecution[]
 
   @@unique([organizationId, projectId, id])
   @@index([organizationId, projectId, status])
+  @@index([dueAt, id], map: "tasks_due_at_id_idx")
   @@index([organizationId, assigneeId, status])
   @@index([organizationId, projectId, creatorId])
   @@map("tasks")
@@ -307,9 +353,143 @@ model TaskActivity {
 
   task  Task          @relation(fields: [organizationId, projectId, taskId], references: [organizationId, projectId, id], onDelete: Restrict)
   actor ProjectMember @relation("TaskActivityActor", fields: [organizationId, projectId, actorId], references: [organizationId, projectId, userId], onDelete: Restrict)
+  automationExecutions WorkflowAutomationExecution[] @relation("WorkflowAutomationSourceActivity")
 
   @@index([organizationId, projectId, taskId, createdAt])
   @@map("task_activities")
+}
+
+model WorkflowAutomation {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  organizationId        String                      @map("organization_id") @db.Uuid
+  projectId             String                      @map("project_id") @db.Uuid
+  createdById            String                      @map("created_by_id") @db.Uuid
+  name                   String                      @db.VarChar(120)
+  trigger                WorkflowAutomationTrigger
+  conditionPriority      TaskPriority?               @map("condition_priority")
+  conditionStatus        TaskStatus?                 @map("condition_status")
+  conditionAssigneeId    String?                     @map("condition_assignee_id") @db.Uuid
+  action                 WorkflowAutomationAction
+  actionValue            String?                     @map("action_value") @db.VarChar(500)
+  actionAssigneeId       String?                     @map("action_assignee_id") @db.Uuid
+  enabled                Boolean                     @default(true)
+  deletedAt              DateTime?                   @map("deleted_at") @db.Timestamptz(3)
+  createdAt              DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  project             Project         @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict, map: "workflow_automations_project_fkey")
+  creator             User            @relation("WorkflowAutomationCreator", fields: [createdById], references: [id], onDelete: Restrict, map: "workflow_automations_creator_fkey")
+  conditionAssignee   ProjectMember?  @relation("WorkflowAutomationConditionAssignee", fields: [organizationId, projectId, conditionAssigneeId], references: [organizationId, projectId, userId], onDelete: Restrict, map: "workflow_automations_condition_assignee_fkey")
+  actionAssignee      ProjectMember?  @relation("WorkflowAutomationActionAssignee", fields: [organizationId, projectId, actionAssigneeId], references: [organizationId, projectId, userId], onDelete: Restrict, map: "workflow_automations_action_assignee_fkey")
+  executions          WorkflowAutomationExecution[]
+
+  @@unique([organizationId, projectId, id])
+  @@index([organizationId, projectId, enabled, trigger], map: "workflow_automations_organization_id_project_id_enabled_trigger")
+  @@map("workflow_automations")
+}
+
+model WorkflowAutomationExecution {
+  id              String                            @id @default(uuid()) @db.Uuid
+  organizationId  String                            @map("organization_id") @db.Uuid
+  projectId       String                            @map("project_id") @db.Uuid
+  ruleId          String                            @map("rule_id") @db.Uuid
+  taskId          String                            @map("task_id") @db.Uuid
+  sourceActivityId String?                           @map("source_activity_id") @db.Uuid
+  eventKey        String                            @map("event_key") @db.VarChar(200)
+  trigger         WorkflowAutomationTrigger
+  status          WorkflowAutomationExecutionStatus @default(RUNNING)
+  reason          String?                           @db.VarChar(500)
+  error           String?                           @db.Text
+  attempt         Int                               @default(1)
+  triggeredAt     DateTime                          @default(now()) @map("triggered_at") @db.Timestamptz(3)
+  completedAt     DateTime?                         @map("completed_at") @db.Timestamptz(3)
+
+  rule          WorkflowAutomation @relation(fields: [organizationId, projectId, ruleId], references: [organizationId, projectId, id], onDelete: Restrict, map: "workflow_automation_executions_rule_fkey")
+  task          Task               @relation(fields: [organizationId, projectId, taskId], references: [organizationId, projectId, id], onDelete: Restrict, map: "workflow_automation_executions_task_fkey")
+  sourceActivity TaskActivity?     @relation("WorkflowAutomationSourceActivity", fields: [sourceActivityId], references: [id], onDelete: Restrict, map: "workflow_automation_executions_source_activity_fkey")
+
+  @@unique([ruleId, eventKey])
+  @@index([organizationId, projectId, triggeredAt(sort: Desc)], map: "workflow_automation_executions_organization_id_project_id_trigg")
+  @@index([status, attempt, triggeredAt])
+  @@map("workflow_automation_executions")
+}
+
+model ProjectDiscussion {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  createdById    String   @map("created_by_id") @db.Uuid
+  title          String   @db.VarChar(160)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  project    Project                     @relation(fields: [organizationId, projectId], references: [organizationId, id], onDelete: Restrict)
+  creator    User                        @relation("ProjectDiscussionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  messages   ProjectDiscussionMessage[]
+  readStates ProjectDiscussionRead[]
+
+  @@unique([organizationId, projectId, id])
+  @@index([organizationId, projectId, createdAt, id], map: "project_discussions_organization_id_project_id_created_at_id_id")
+  @@map("project_discussions")
+}
+
+model ProjectDiscussionMessage {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  projectId      String    @map("project_id") @db.Uuid
+  discussionId   String    @map("discussion_id") @db.Uuid
+  authorId       String    @map("author_id") @db.Uuid
+  body           String    @db.VarChar(5000)
+  editedAt       DateTime? @map("edited_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  discussion ProjectDiscussion @relation(fields: [organizationId, projectId, discussionId], references: [organizationId, projectId, id], onDelete: Restrict, map: "project_discussion_messages_organization_id_project_id_discussi")
+  author     User              @relation("ProjectDiscussionMessageAuthor", fields: [authorId], references: [id], onDelete: Restrict, map: "project_discussion_messages_author_id_fkey")
+
+  @@unique([organizationId, projectId, discussionId, id], map: "project_discussion_messages_scope_id_key")
+  @@index([organizationId, projectId, discussionId, createdAt, id], map: "project_discussion_messages_cursor_idx")
+  @@map("project_discussion_messages")
+}
+
+model ProjectDiscussionRead {
+  organizationId    String    @map("organization_id") @db.Uuid
+  projectId         String    @map("project_id") @db.Uuid
+  discussionId      String    @map("discussion_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  lastReadAt        DateTime? @map("last_read_at") @db.Timestamptz(3)
+  lastReadMessageId String?   @map("last_read_message_id") @db.Uuid
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  discussion ProjectDiscussion @relation(fields: [organizationId, projectId, discussionId], references: [organizationId, projectId, id], onDelete: Restrict, map: "project_discussion_reads_organization_id_project_id_discussion_")
+  user       User              @relation(fields: [userId], references: [id], onDelete: Restrict, map: "project_discussion_reads_user_id_fkey")
+
+  @@id([organizationId, projectId, discussionId, userId])
+  @@index([organizationId, projectId, userId])
+  @@map("project_discussion_reads")
+}
+
+model TaskBlocker {
+  id             String     @id @default(uuid()) @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  projectId      String     @map("project_id") @db.Uuid
+  taskId         String     @map("task_id") @db.Uuid
+  reason         String     @db.VarChar(2000)
+  priorStatus    TaskStatus @map("prior_status")
+  createdById    String     @map("created_by_id") @db.Uuid
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  resolvedById   String?    @map("resolved_by_id") @db.Uuid
+  resolvedAt     DateTime?  @map("resolved_at") @db.Timestamptz
+
+  task     Task  @relation(fields: [organizationId, projectId, taskId], references: [organizationId, projectId, id], onDelete: Restrict)
+  creator  User  @relation("TaskBlockerCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  resolver User? @relation("TaskBlockerResolver", fields: [resolvedById], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, projectId, taskId], where: { resolvedAt: null }, map: "task_blockers_one_active_per_task")
+  @@index([organizationId, projectId, taskId, createdAt], map: "task_blockers_organization_id_project_id_task_id_created_at_idx")
+  @@index([organizationId, projectId, taskId, resolvedAt], map: "task_blockers_organization_id_project_id_task_id_resolved_at_id")
+  @@map("task_blockers")
 }
 
 model FileAttachment {
@@ -330,7 +510,7 @@ model FileAttachment {
   taskAttachment     TaskFileAttachment?
 
   @@unique([organizationId, projectId, id])
-  @@index([organizationId, projectId, removedAt, createdAt(sort: Desc)])
+  @@index([organizationId, projectId, removedAt, createdAt(sort: Desc)], map: "file_attachments_organization_id_project_id_removed_at_created_")
   @@map("file_attachments")
 }
 

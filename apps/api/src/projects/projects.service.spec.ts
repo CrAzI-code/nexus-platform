@@ -50,14 +50,17 @@ describe('ProjectsService', () => {
           tx: typeof transaction,
           publish: (items: NewNotification[]) => Promise<void>,
         ) => Promise<T>,
+        options?: { isolationLevel?: string },
       ): Promise<T> =>
-        prisma.$transaction((tx: typeof transaction) =>
-          operation(tx, async (items) => {
-            await tx.notification.createMany({
-              data: items,
-              skipDuplicates: true,
-            });
-          }),
+        prisma.$transaction(
+          (tx: typeof transaction) =>
+            operation(tx, async (items) => {
+              await tx.notification.createMany({
+                data: items,
+                skipDuplicates: true,
+              });
+            }),
+          options,
         ),
     ),
   };
@@ -424,6 +427,20 @@ describe('ProjectsService', () => {
             }),
           }),
         );
+        expect(transaction.notification.createMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: [
+              expect.objectContaining({
+                recipientId: 'eligible-user-id',
+                organizationId: 'organization-id',
+                projectId: 'project-id',
+                type: 'PROJECT_ADDED',
+                resourceId: 'project-id',
+              }),
+            ],
+            skipDuplicates: true,
+          }),
+        );
       },
     );
 
@@ -464,6 +481,7 @@ describe('ProjectsService', () => {
       );
 
       expect(transaction.auditLog.create).not.toHaveBeenCalled();
+      expect(transaction.notification.createMany).not.toHaveBeenCalled();
     });
 
     it('does not add someone without an active membership in this organization', async () => {

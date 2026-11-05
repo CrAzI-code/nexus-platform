@@ -9,9 +9,12 @@ unread count periodically and reloads persisted items when the inbox opens or
 the stream reconnects.
 
 The inbox covers task assignment, status changes, comments and name-based
-mentions, blockers, due-date changes, overdue tasks, project membership, and
-organization invitations. Invitation notifications are only visible for a
-verified matching email address and a still-pending invitation. If an invite
+mentions, blockers, due-date changes, overdue tasks, project membership,
+project discussion messages, and organization invitations. Discussion
+notifications are persisted with the message and contain no message body; the
+discussion API enforces the recipient's current project access. Invitation
+notifications are only visible for a verified matching email address and a
+still-pending invitation. If an invite
 was created before the recipient had a NEXUS account, the inbox creates its
 deduplicated notification when the signed-in user next refreshes notifications.
 

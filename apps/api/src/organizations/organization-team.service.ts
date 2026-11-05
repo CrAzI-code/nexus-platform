@@ -278,7 +278,7 @@ export class OrganizationTeamService {
             organizationId,
             type: 'ORGANIZATION_INVITATION',
             title: 'Organization invitation',
-            message: `${organization.name} invited you to join the team.`,
+            message: 'You have been invited to join an organization.',
             resourceType: 'ORGANIZATION_INVITATION',
             resourceId: invitation.id,
             eventKey: `organization-invitation:${invitation.id}`,
@@ -311,9 +311,7 @@ export class OrganizationTeamService {
         throw new NotFoundException('Invitation not found.');
       }
       if (invitation.status !== 'PENDING') {
-        throw new ConflictException(
-          'Only pending invitations can be revoked.',
-        );
+        throw new ConflictException('Only pending invitations can be revoked.');
       }
       if (invitation.expiresAt <= new Date()) {
         throw new ConflictException('This invitation has expired.');
@@ -529,15 +527,16 @@ export class OrganizationTeamService {
         before: { role: member.role, status: 'ACTIVE' },
         after: { status: 'REMOVED' },
       });
-      const activeProjectMemberships =
-        await transaction.projectMember.findMany({
+      const activeProjectMemberships = await transaction.projectMember.findMany(
+        {
           where: {
             organizationId,
             userId: memberUserId,
             status: 'ACTIVE',
           },
           select: { id: true, status: true },
-        });
+        },
+      );
       await transaction.projectMember.updateMany({
         where: {
           organizationId,
@@ -798,9 +797,7 @@ export class OrganizationTeamService {
       );
     }
     if (existingMembership?.status === 'SUSPENDED') {
-      throw new ConflictException(
-        'Your organization membership is suspended.',
-      );
+      throw new ConflictException('Your organization membership is suspended.');
     }
     const otherActiveMembership =
       await transaction.organizationMembership.findFirst({
@@ -871,9 +868,7 @@ export class OrganizationTeamService {
     };
   }
 
-  private assertInvitationAvailable(
-    invitation: AcceptanceInvitation,
-  ): void {
+  private assertInvitationAvailable(invitation: AcceptanceInvitation): void {
     if (invitation.status === 'REVOKED') {
       throw new ConflictException('This invitation has been revoked.');
     }
@@ -883,10 +878,7 @@ export class OrganizationTeamService {
     if (invitation.status === 'DECLINED') {
       throw new ConflictException('This invitation has already been declined.');
     }
-    if (
-      invitation.status === 'EXPIRED' ||
-      invitation.expiresAt <= new Date()
-    ) {
+    if (invitation.status === 'EXPIRED' || invitation.expiresAt <= new Date()) {
       throw new ConflictException('This invitation has expired.');
     }
     if (invitation.organization.status !== 'ACTIVE') {
@@ -896,18 +888,13 @@ export class OrganizationTeamService {
     }
   }
 
-  private logInvitationAcceptanceFailure(
-    error: unknown,
-    stage: string,
-  ): void {
+  private logInvitationAcceptanceFailure(error: unknown, stage: string): void {
     if (error instanceof HttpException) return;
     const category =
       error instanceof Prisma.PrismaClientKnownRequestError
         ? `prisma_${error.code.toLowerCase()}`
         : 'unexpected_error';
-    this.logger.error(
-      `Invitation acceptance failed at ${stage}: ${category}`,
-    );
+    this.logger.error(`Invitation acceptance failed at ${stage}: ${category}`);
   }
 
   private async listPendingInvitations(

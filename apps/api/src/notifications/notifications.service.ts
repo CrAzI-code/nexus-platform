@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Observable } from 'rxjs';
+import type { MessageEvent } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client.js';
 import type {
   NotificationResourceType,
@@ -105,12 +107,11 @@ export class NotificationsService {
       async (transaction) =>
         operation(transaction, async (notifications) => {
           if (notifications.length === 0) return;
-          const created =
-            await transaction.notification.createManyAndReturn({
-              data: notifications,
-              skipDuplicates: true,
-              select: persistedNotificationSelect,
-            });
+          const created = await transaction.notification.createManyAndReturn({
+            data: notifications,
+            skipDuplicates: true,
+            select: persistedNotificationSelect,
+          });
           pendingEvents.push(
             ...created.map((row: PersistedNotificationRow) => ({
               recipientId: row.recipientId,
@@ -120,7 +121,7 @@ export class NotificationsService {
         }),
       options,
     );
-    this.stream.publish(pendingEvents);
+    if (pendingEvents.length > 0) this.stream.publish(pendingEvents);
     return result;
   }
 
@@ -135,6 +136,7 @@ export class NotificationsService {
       this.getAccessibleOrganizations(recipientId),
       this.getPendingInvitations(recipientEmail, emailVerified),
     ]);
+    await this.ensureInvitationNotifications(recipientId, invitationIds);
     const rows = await this.prisma.notification.findMany({
       where: this.visibleWhere(recipientId, accessible, invitationIds),
       select: notificationSelect,
@@ -161,6 +163,7 @@ export class NotificationsService {
       this.getAccessibleOrganizations(recipientId),
       this.getPendingInvitations(recipientEmail, emailVerified),
     ]);
+    await this.ensureInvitationNotifications(recipientId, invitationIds);
     return {
       count: await this.prisma.notification.count({
         where: {
@@ -169,6 +172,70 @@ export class NotificationsService {
         },
       }),
     };
+  }
+
+  async listForStream(
+    recipientId: string,
+    recipientEmail: string,
+    emailVerified: boolean,
+    cursor: { createdAt: Date; id: string } | null,
+    take = 100,
+  ): Promise<NotificationItem[]> {
+    const [accessible, invitationIds] = await Promise.all([
+      this.getAccessibleOrganizations(recipientId),
+      this.getPendingInvitations(recipientEmail, emailVerified),
+    ]);
+    const visibility = this.visibleWhere(
+      recipientId,
+      accessible,
+      invitationIds,
+    );
+    const where: Prisma.NotificationWhereInput = cursor
+      ? {
+          AND: [
+            visibility,
+            {
+              OR: [
+                { createdAt: { gt: cursor.createdAt } },
+                { createdAt: cursor.createdAt, id: { gt: cursor.id } },
+              ],
+            },
+          ],
+        }
+      : visibility;
+    const rows = await this.prisma.notification.findMany({
+      where,
+      select: notificationSelect,
+      orderBy: [
+        { createdAt: cursor ? 'asc' : 'desc' },
+        { id: cursor ? 'asc' : 'desc' },
+      ],
+      take,
+    });
+    const orderedRows = cursor ? rows : rows.reverse();
+    return orderedRows
+      .filter((row) => this.canView(row, accessible, invitationIds))
+      .map((row) => this.toResponse(row));
+  }
+
+  streamFor(
+    recipientId: string,
+    recipientEmail: string,
+    emailVerified: boolean,
+    lastEventId?: string,
+  ): Observable<MessageEvent> {
+    return this.stream.streamFor(
+      recipientId,
+      (cursor, take) =>
+        this.listForStream(
+          recipientId,
+          recipientEmail,
+          emailVerified,
+          cursor,
+          take,
+        ),
+      lastEventId,
+    );
   }
 
   async markRead(
@@ -181,11 +248,7 @@ export class NotificationsService {
       this.getAccessibleOrganizations(recipientId),
       this.getPendingInvitations(recipientEmail, emailVerified),
     ]);
-    const where = this.visibleWhere(
-      recipientId,
-      accessible,
-      invitationIds,
-    );
+    const where = this.visibleWhere(recipientId, accessible, invitationIds);
     const currentNotification = await this.prisma.notification.findFirst({
       where: { ...where, id: notificationId },
       select: notificationSelect,
@@ -222,7 +285,8 @@ export class NotificationsService {
     const result = await this.prisma.notification.deleteMany({
       where: { id: notificationId, recipientId },
     });
-    if (result.count !== 1) throw new NotFoundException('Notification not found.');
+    if (result.count !== 1)
+      throw new NotFoundException('Notification not found.');
     return { deleted: true };
   }
 
@@ -237,8 +301,8 @@ export class NotificationsService {
       },
       select: { organizationId: true, role: true },
     });
-    const organizationIds = memberships.map((membership) =>
-      membership.organizationId,
+    const organizationIds = memberships.map(
+      (membership) => membership.organizationId,
     );
     const privilegedOrganizationIds = memberships
       .filter(
@@ -284,6 +348,27 @@ export class NotificationsService {
     return invitations;
   }
 
+  private async ensureInvitationNotifications(
+    recipientId: string,
+    invitations: PendingInvitationReference[],
+  ): Promise<void> {
+    if (invitations.length === 0) return;
+    await this.withTransaction(async (_transaction, publish) => {
+      await publish(
+        invitations.map((invitation) => ({
+          recipientId,
+          organizationId: invitation.organizationId,
+          type: 'ORGANIZATION_INVITATION',
+          title: 'Organization invitation',
+          message: 'You have a pending invitation to join an organization.',
+          resourceType: 'ORGANIZATION_INVITATION',
+          resourceId: invitation.id,
+          eventKey: `organization-invitation:${invitation.id}`,
+        })),
+      );
+    });
+  }
+
   private canView(
     notification: NotificationRow,
     accessible: AccessibleOrganizations,
@@ -318,9 +403,7 @@ export class NotificationsService {
   ): Prisma.NotificationWhereInput {
     const organizationIds = [...accessible.organizationIds];
     const projectIds = [...accessible.projectIds];
-    const privilegedOrganizationIds = [
-      ...accessible.privilegedOrganizationIds,
-    ];
+    const privilegedOrganizationIds = [...accessible.privilegedOrganizationIds];
     const visibleEvents: Prisma.NotificationWhereInput[] = [
       { type: 'TEAM_UPDATED' },
       ...(invitations.length > 0

@@ -9,6 +9,9 @@ import { TasksModule } from './tasks/tasks.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
 import { FilesModule } from './files/files.module.js';
+import { ProjectDiscussionsModule } from './project-discussions/project-discussions.module.js';
+import { WorkflowAutomationsModule } from './workflow-automations/workflow-automations.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { FilesModule } from './files/files.module.js';
     NotificationsModule,
     AuditLogsModule,
     FilesModule,
+    ProjectDiscussionsModule,
+    WorkflowAutomationsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

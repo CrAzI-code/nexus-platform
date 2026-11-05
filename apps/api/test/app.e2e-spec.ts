@@ -4,6 +4,8 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { PrismaService } from './../src/prisma.service.js';
+import { OverdueNotificationsService } from './../src/notifications/overdue-notifications.service.js';
+import { WorkflowAutomationsService } from './../src/workflow-automations/workflow-automations.service.js';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -14,6 +16,10 @@ describe('AppController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue({ user: { count: vi.fn().mockResolvedValue(0) } })
+      .overrideProvider(OverdueNotificationsService)
+      .useValue({ onModuleInit: vi.fn(), onModuleDestroy: vi.fn() })
+      .overrideProvider(WorkflowAutomationsService)
+      .useValue({ onModuleInit: vi.fn(), onModuleDestroy: vi.fn() })
       .compile();
 
     app = moduleFixture.createNestApplication();

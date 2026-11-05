@@ -732,6 +732,14 @@ describe('TasksService', () => {
         }),
       }),
     );
+    expect(transaction.taskActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'STATUS_CHANGED',
+          message: 'Changed status from TODO to BLOCKED.',
+        }),
+      }),
+    );
     expect(transaction.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -997,6 +1005,14 @@ describe('TasksService', () => {
         data: expect.objectContaining({
           type: 'BLOCKER_RESOLVED',
           message: 'Resolved blocker: Waiting on vendor access.',
+        }),
+      }),
+    );
+    expect(transaction.taskActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'STATUS_CHANGED',
+          message: 'Changed status from BLOCKED to IN_PROGRESS.',
         }),
       }),
     );

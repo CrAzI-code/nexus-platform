@@ -26,6 +26,8 @@ describe('TasksController', () => {
     update: vi.fn(),
     assign: vi.fn(),
     changeStatus: vi.fn(),
+    createBlocker: vi.fn(),
+    resolveBlocker: vi.fn(),
     addComment: vi.fn(),
     archive: vi.fn(),
     restore: vi.fn(),
@@ -33,6 +35,7 @@ describe('TasksController', () => {
   const organizationId = '22222222-2222-4222-8222-222222222222';
   const projectId = '33333333-3333-4333-8333-333333333333';
   const taskId = '44444444-4444-4444-8444-444444444444';
+  const blockerId = '55555555-5555-4555-8555-555555555555';
   const route = `/organizations/${organizationId}/projects/${projectId}/tasks`;
   const response = { id: taskId, title: 'Prepare launch' };
 
@@ -62,7 +65,16 @@ describe('TasksController', () => {
 
   it('rejects unauthenticated task requests', async () => {
     await request(app.getHttpServer()).get(route).expect(401);
+    await request(app.getHttpServer())
+      .post(`${route}/${taskId}/blockers`)
+      .send({ reason: 'Unauthenticated request.' })
+      .expect(401);
+    await request(app.getHttpServer())
+      .patch(`${route}/${taskId}/blockers/${blockerId}/resolve`)
+      .expect(401);
     expect(tasks.list).not.toHaveBeenCalled();
+    expect(tasks.createBlocker).not.toHaveBeenCalled();
+    expect(tasks.resolveBlocker).not.toHaveBeenCalled();
   });
 
   it('rejects malformed organization, project, and task IDs', async () => {
@@ -152,6 +164,15 @@ describe('TasksController', () => {
       .send({ status: 'BLOCKED', blockerReason: 'Waiting on a review' })
       .expect(200);
     await request(app.getHttpServer())
+      .post(`${route}/${taskId}/blockers`)
+      .set(headers)
+      .send({ reason: 'Waiting on a review.' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .patch(`${route}/${taskId}/blockers/${blockerId}/resolve`)
+      .set(headers)
+      .expect(200);
+    await request(app.getHttpServer())
       .post(`${route}/${taskId}/comments`)
       .set(headers)
       .send({ body: 'I can take this.' })
@@ -192,6 +213,20 @@ describe('TasksController', () => {
       user.id,
       { status: 'BLOCKED', blockerReason: 'Waiting on a review' },
     );
+    expect(tasks.createBlocker).toHaveBeenCalledWith(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+      { reason: 'Waiting on a review.' },
+    );
+    expect(tasks.resolveBlocker).toHaveBeenCalledWith(
+      organizationId,
+      projectId,
+      taskId,
+      blockerId,
+      user.id,
+    );
     expect(tasks.addComment).toHaveBeenCalledWith(
       organizationId,
       projectId,
@@ -218,8 +253,29 @@ describe('TasksController', () => {
       .set(headers)
       .send({ assigneeId: 'not-a-uuid' })
       .expect(400);
+    await request(app.getHttpServer())
+      .post(`${route}/${taskId}/blockers`)
+      .set(headers)
+      .send({ reason: '   ' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(`${route}/${taskId}/blockers`)
+      .set(headers)
+      .send({ reason: 'Blocked', organizationId: 'other-org' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post(`${route}/${taskId}/blockers`)
+      .set(headers)
+      .send({ reason: 'b'.repeat(2001) })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch(`${route}/${taskId}/blockers/not-a-uuid/resolve`)
+      .set(headers)
+      .expect(400);
     expect(tasks.create).not.toHaveBeenCalled();
     expect(tasks.changeStatus).not.toHaveBeenCalled();
     expect(tasks.assign).not.toHaveBeenCalled();
+    expect(tasks.createBlocker).not.toHaveBeenCalled();
+    expect(tasks.resolveBlocker).not.toHaveBeenCalled();
   });
 });

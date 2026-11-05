@@ -68,6 +68,7 @@ export function NotificationCenter({
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const pageRef = useRef(1);
+  const lastEventIdRef = useRef<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const itemsRef = useRef(items);
@@ -98,9 +99,7 @@ export function NotificationCenter({
           const nextItems = append
             ? [
                 ...current,
-                ...result.items.filter(
-                  (item) => !currentById.has(item.id),
-                ),
+                ...result.items.filter((item) => !currentById.has(item.id)),
               ]
             : [...pageItems, ...streamedItems];
           itemsRef.current = nextItems;
@@ -190,7 +189,8 @@ export function NotificationCenter({
           await consumeNotificationStream(
             token,
             controller.signal,
-            (notification) => {
+            (notification, eventId) => {
+              lastEventIdRef.current = eventId;
               const isNew = !itemsRef.current.some(
                 (item) => item.id === notification.id,
               );
@@ -209,9 +209,10 @@ export function NotificationCenter({
               connectedAt = Date.now();
               void refreshPersistedData(token);
             },
+            lastEventIdRef.current,
           );
         } catch {
-          // The existing API polling remains available while the stream reconnects.
+          // Persisted inbox polling recovers events if the stream is unavailable.
         }
         if (!active) return;
         if (connectedAt !== null && Date.now() - connectedAt >= 30_000) {
@@ -306,7 +307,9 @@ export function NotificationCenter({
       const token = await getToken();
       if (!token) throw new Error("Your session has expired. Sign in again.");
       await deleteNotification(token, notification.id);
-      setItems((current) => current.filter((item) => item.id !== notification.id));
+      setItems((current) =>
+        current.filter((item) => item.id !== notification.id),
+      );
       if (!notification.readAt) {
         setUnreadCount((count) => Math.max(0, count - 1));
       }
@@ -348,7 +351,9 @@ export function NotificationCenter({
             <div>
               <strong>Notifications</strong>
               <span className="notification-unread-label">
-                {unreadCount > 0 ? `${unreadCount} unread` : "You’re all caught up"}
+                {unreadCount > 0
+                  ? `${unreadCount} unread`
+                  : "You’re all caught up"}
               </span>
             </div>
             {unreadCount > 0 && (
@@ -387,7 +392,10 @@ export function NotificationCenter({
                   <Icon name="bell" width={18} height={18} />
                 </span>
                 <strong>No notifications yet</strong>
-                <p>Important updates for your projects and team will show up here.</p>
+                <p>
+                  Important updates for your projects and team will show up
+                  here.
+                </p>
               </div>
             ) : (
               items.map((item) => (
@@ -400,7 +408,10 @@ export function NotificationCenter({
                     onClick={() => void openNotification(item)}
                     type="button"
                   >
-                    <span className="notification-indicator" aria-hidden="true" />
+                    <span
+                      className="notification-indicator"
+                      aria-hidden="true"
+                    />
                     <span className="notification-copy">
                       <strong>{item.title}</strong>
                       <span>{item.message}</span>

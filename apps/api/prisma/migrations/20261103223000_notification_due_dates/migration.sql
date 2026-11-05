@@ -1,0 +1,2 @@
+ALTER TYPE "NotificationType" ADD VALUE 'TASK_DUE_DATE';
+ALTER TYPE "NotificationType" ADD VALUE 'TASK_OVERDUE';

@@ -2,6 +2,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -23,15 +24,11 @@ import {
   type NotificationItem,
   type NotificationPage,
 } from './notifications.service.js';
-import { NotificationStreamService } from './notification-stream.service.js';
 
 @Controller('notifications')
 @UseGuards(ClerkAuthGuard)
 export class NotificationsController {
-  constructor(
-    private readonly notifications: NotificationsService,
-    private readonly stream: NotificationStreamService,
-  ) {}
+  constructor(private readonly notifications: NotificationsService) {}
 
   @Get()
   list(
@@ -48,7 +45,9 @@ export class NotificationsController {
   }
 
   @Get('unread-count')
-  unreadCount(@CurrentUser() user: AuthenticatedUser): Promise<{ count: number }> {
+  unreadCount(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ count: number }> {
     return this.notifications.unreadCount(
       user.id,
       user.email,
@@ -59,8 +58,14 @@ export class NotificationsController {
   @Sse('stream')
   streamNotifications(
     @CurrentUser() user: AuthenticatedUser,
+    @Headers('last-event-id') lastEventId?: string,
   ): Observable<MessageEvent> {
-    return this.stream.streamFor(user.id);
+    return this.notifications.streamFor(
+      user.id,
+      user.email,
+      user.primaryEmailVerified === true,
+      lastEventId,
+    );
   }
 
   @Patch(':notificationId/read')

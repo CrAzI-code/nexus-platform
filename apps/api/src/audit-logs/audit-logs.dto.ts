@@ -39,6 +39,8 @@ const actions: AuditLogAction[] = [
   'TASK_ASSIGNED',
   'TASK_UPDATED',
   'TASK_STATUS_CHANGED',
+  'TASK_BLOCKED',
+  'TASK_UNBLOCKED',
   'TASK_ARCHIVED',
   'TASK_RESTORED',
   'FILE_UPLOADED',

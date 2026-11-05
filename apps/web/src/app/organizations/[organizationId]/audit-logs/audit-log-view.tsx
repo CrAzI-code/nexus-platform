@@ -40,6 +40,8 @@ const actionLabels: Record<AuditLogAction, string> = {
   TASK_ASSIGNED: "changed task assignment",
   TASK_UPDATED: "updated a task",
   TASK_STATUS_CHANGED: "changed task status",
+  TASK_BLOCKED: "blocked a task",
+  TASK_UNBLOCKED: "resolved a task blocker",
   TASK_ARCHIVED: "archived a task",
   TASK_RESTORED: "restored a task",
   FILE_UPLOADED: "uploaded a file",

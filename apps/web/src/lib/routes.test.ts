@@ -4,6 +4,7 @@ import {
   organizationDashboardPath,
   organizationFilesPath,
   organizationMembersPath,
+  organizationSettingsPath,
 } from "./routes";
 
 describe("organization navigation routes", () => {
@@ -31,6 +32,9 @@ describe("organization navigation routes", () => {
     );
     expect(organizationFilesPath("org/123")).toBe(
       "/organizations/org%2F123/files",
+    );
+    expect(organizationSettingsPath("org/123")).toBe(
+      "/organizations/org%2F123/settings",
     );
   });
 });

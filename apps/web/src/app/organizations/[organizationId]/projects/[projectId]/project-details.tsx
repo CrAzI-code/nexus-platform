@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { ProjectDialog } from "@/components/dashboard/project-dialog";
 import { FileAttachmentsPanel } from "@/components/dashboard/file-attachments-panel";
 import { ProjectMembersPanel } from "@/components/dashboard/project-members-panel";
+import { ProjectDiscussionsPanel } from "@/components/dashboard/project-discussions-panel";
+import { WorkflowAutomationsPanel } from "@/components/dashboard/workflow-automations-panel";
+import { ProjectAnalyticsPanel } from "@/components/dashboard/analytics-panels";
 import { TaskManagement } from "@/components/dashboard/task-management";
 import {
   archiveProject,
@@ -215,6 +218,10 @@ export default function ProjectDetails({
               </div>
               {error && <p className="project-details-error" role="alert">{error}</p>}
             </section>
+            <ProjectAnalyticsPanel
+              organizationId={organizationId}
+              projectId={projectId}
+            />
             <ProjectMembersPanel
               canManage={project.canManage}
               organizationId={organizationId}
@@ -225,6 +232,18 @@ export default function ProjectDetails({
               organizationId={organizationId}
               projectId={projectId}
             />
+            <ProjectDiscussionsPanel
+              organizationId={organizationId}
+              projectId={projectId}
+              projectStatus={project.status}
+            />
+            {project.canManage && (
+              <WorkflowAutomationsPanel
+                organizationId={organizationId}
+                projectId={projectId}
+                projectStatus={project.status}
+              />
+            )}
             <TaskManagement
               organizationId={organizationId}
               onTaskCreated={() => {

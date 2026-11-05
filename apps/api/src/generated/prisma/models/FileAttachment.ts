@@ -595,14 +595,6 @@ export type FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput = {
   deleteMany?: Prisma.FileAttachmentScalarWhereInput | Prisma.FileAttachmentScalarWhereInput[]
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type EnumFileScanStatusFieldUpdateOperationsInput = {
   set?: $Enums.FileScanStatus
 }

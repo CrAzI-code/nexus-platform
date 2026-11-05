@@ -3,16 +3,19 @@ export type NotificationType =
   | "TASK_COMMENT"
   | "TASK_MENTION"
   | "TASK_STATUS_CHANGED"
+  | "TASK_BLOCKED"
+  | "TASK_UNBLOCKED"
+  | "TASK_DUE_DATE"
+  | "TASK_OVERDUE"
+  | "WORKFLOW_AUTOMATION"
   | "PROJECT_ADDED"
   | "PROJECT_UPDATED"
   | "ORGANIZATION_INVITATION"
-  | "TEAM_UPDATED";
+  | "TEAM_UPDATED"
+  | "PROJECT_DISCUSSION_MESSAGE";
 
 export type NotificationResourceType =
-  | "TASK"
-  | "PROJECT"
-  | "ORGANIZATION_INVITATION"
-  | "ORGANIZATION";
+  "TASK" | "PROJECT" | "ORGANIZATION_INVITATION" | "ORGANIZATION";
 
 export type NexusNotification = {
   id: string;
@@ -34,7 +37,10 @@ export type NotificationPage = {
   hasMore: boolean;
 };
 
-export type NotificationStreamHandler = (notification: NexusNotification) => void;
+export type NotificationStreamHandler = (
+  notification: NexusNotification,
+  eventId: string,
+) => void;
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -48,10 +54,16 @@ function isNotificationType(value: unknown): value is NotificationType {
     value === "TASK_COMMENT" ||
     value === "TASK_MENTION" ||
     value === "TASK_STATUS_CHANGED" ||
+    value === "TASK_BLOCKED" ||
+    value === "TASK_UNBLOCKED" ||
+    value === "TASK_DUE_DATE" ||
+    value === "TASK_OVERDUE" ||
+    value === "WORKFLOW_AUTOMATION" ||
     value === "PROJECT_ADDED" ||
     value === "PROJECT_UPDATED" ||
     value === "ORGANIZATION_INVITATION" ||
-    value === "TEAM_UPDATED"
+    value === "TEAM_UPDATED" ||
+    value === "PROJECT_DISCUSSION_MESSAGE"
   );
 }
 
@@ -117,11 +129,16 @@ export async function consumeNotificationStream(
   signal: AbortSignal,
   onNotification: NotificationStreamHandler,
   onConnected: () => void,
+  lastEventId?: string,
 ): Promise<void> {
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl}/notifications/stream`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "text/event-stream",
+        ...(lastEventId ? { "Last-Event-ID": lastEventId } : {}),
+      },
       signal,
     });
   } catch (error) {
@@ -150,6 +167,7 @@ export async function consumeNotificationStream(
   const decoder = new TextDecoder();
   let buffer = "";
   let eventType = "";
+  let currentEventId = "";
   let dataLines: string[] = [];
 
   const dispatch = () => {
@@ -158,9 +176,15 @@ export async function consumeNotificationStream(
       if (!isNotification(payload)) {
         throw new Error("The server sent an invalid notification event.");
       }
-      onNotification(payload);
+      if (!currentEventId) {
+        throw new Error(
+          "The server sent a notification without a replay cursor.",
+        );
+      }
+      onNotification(payload, currentEventId);
     }
     eventType = "";
+    currentEventId = "";
     dataLines = [];
   };
 
@@ -177,6 +201,8 @@ export async function consumeNotificationStream(
           dispatch();
         } else if (line.startsWith("event:")) {
           eventType = line.slice(6).trimStart();
+        } else if (line.startsWith("id:")) {
+          currentEventId = line.slice(3).trimStart();
         } else if (line.startsWith("data:")) {
           dataLines.push(line.slice(5).trimStart());
         }
@@ -207,7 +233,9 @@ export async function listNotifications(
     result.pageSize !== pageSize ||
     typeof result.hasMore !== "boolean"
   ) {
-    throw new Error("The server returned an unexpected notifications response.");
+    throw new Error(
+      "The server returned an unexpected notifications response.",
+    );
   }
   return {
     items: result.items,
@@ -242,14 +270,14 @@ export async function markNotificationRead(
   return result;
 }
 
-export async function markAllNotificationsRead(
-  token: string,
-): Promise<number> {
+export async function markAllNotificationsRead(token: string): Promise<number> {
   const result = await request(token, "/notifications/read-all", {
     method: "PATCH",
   });
   if (!isRecord(result) || typeof result.updated !== "number") {
-    throw new Error("The server returned an unexpected notifications response.");
+    throw new Error(
+      "The server returned an unexpected notifications response.",
+    );
   }
   return result.updated;
 }
@@ -264,6 +292,8 @@ export async function deleteNotification(
     { method: "DELETE" },
   );
   if (!isRecord(result) || result.deleted !== true) {
-    throw new Error("The server returned an unexpected notifications response.");
+    throw new Error(
+      "The server returned an unexpected notifications response.",
+    );
   }
 }

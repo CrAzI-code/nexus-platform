@@ -785,6 +785,15 @@ export class TasksService {
                 'This task changed. Reload and try again.',
               );
             }
+            await this.recordActivity(
+              transaction,
+              organizationId,
+              projectId,
+              taskId,
+              userId,
+              'STATUS_CHANGED',
+              `Changed status from ${task.status} to BLOCKED.`,
+            );
             await AuditLogsService.record(transaction, {
               organizationId,
               actorId: userId,
@@ -1231,6 +1240,15 @@ export class TasksService {
       throw new ConflictException('This task changed. Reload and try again.');
     }
 
+    await this.recordActivity(
+      transaction,
+      organizationId,
+      projectId,
+      taskId,
+      actorId,
+      'STATUS_CHANGED',
+      `Changed status from BLOCKED to ${nextStatus}.`,
+    );
     await this.recordActivity(
       transaction,
       organizationId,

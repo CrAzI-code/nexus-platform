@@ -10,13 +10,14 @@ import {
   organizationDashboardPath,
   organizationFilesPath,
   organizationMembersPath,
+  organizationSettingsPath,
 } from "@/lib/routes";
 
 export type DashboardSection = "home" | "work" | "projects";
 
 type DashboardSidebarProps = {
   activeSection: DashboardSection | null;
-  activeOrganizationPage?: "people" | "audit" | "files";
+  activeOrganizationPage?: "people" | "audit" | "files" | "settings";
   workspaces: Workspace[];
   workspaceId: string;
   homeHref: string;
@@ -36,10 +37,6 @@ const primaryNavigation: {
   { id: "home", label: "Home", icon: "grid" },
   { id: "work", label: "My Work", icon: "check-square" },
   { id: "projects", label: "Projects", icon: "briefcase" },
-];
-
-const upcomingNavigation: { label: string; icon: IconName }[] = [
-  { label: "Settings", icon: "settings" },
 ];
 
 export function DashboardSidebar({
@@ -163,9 +160,7 @@ export function DashboardSidebar({
           </Link>
         ))}
         <Link
-          aria-current={
-            activeOrganizationPage === "files" ? "page" : undefined
-          }
+          aria-current={activeOrganizationPage === "files" ? "page" : undefined}
           className="nav-link"
           href={organizationFilesPath(workspaceId)}
           onClick={onMobileClose}
@@ -213,18 +208,18 @@ export function DashboardSidebar({
             <span>Audit logs</span>
           </Link>
         )}
-        {upcomingNavigation.map((item) => (
-          <div
-            aria-disabled="true"
-            className="nav-disabled"
-            key={item.label}
-            title={`${item.label} does not have a dedicated route yet`}
-          >
-            <Icon name={item.icon} width={18} height={18} />
-            <span>{item.label}</span>
-            <span className="nav-soon">Unavailable</span>
-          </div>
-        ))}
+        <Link
+          aria-current={
+            activeOrganizationPage === "settings" ? "page" : undefined
+          }
+          className="nav-link"
+          href={organizationSettingsPath(workspaceId)}
+          onClick={onMobileClose}
+          title="Settings"
+        >
+          <Icon name="settings" width={18} height={18} />
+          <span>Settings</span>
+        </Link>
       </nav>
 
       <div className="sidebar-spacer" />

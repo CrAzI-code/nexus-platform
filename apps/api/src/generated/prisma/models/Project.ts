@@ -203,6 +203,8 @@ export type ProjectWhereInput = {
   tasks?: Prisma.TaskListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   files?: Prisma.FileAttachmentListRelationFilter
+  discussions?: Prisma.ProjectDiscussionListRelationFilter
+  automations?: Prisma.WorkflowAutomationListRelationFilter
 }
 
 export type ProjectOrderByWithRelationInput = {
@@ -218,6 +220,8 @@ export type ProjectOrderByWithRelationInput = {
   tasks?: Prisma.TaskOrderByRelationAggregateInput
   notifications?: Prisma.NotificationOrderByRelationAggregateInput
   files?: Prisma.FileAttachmentOrderByRelationAggregateInput
+  discussions?: Prisma.ProjectDiscussionOrderByRelationAggregateInput
+  automations?: Prisma.WorkflowAutomationOrderByRelationAggregateInput
 }
 
 export type ProjectWhereUniqueInput = Prisma.AtLeast<{
@@ -237,6 +241,8 @@ export type ProjectWhereUniqueInput = Prisma.AtLeast<{
   tasks?: Prisma.TaskListRelationFilter
   notifications?: Prisma.NotificationListRelationFilter
   files?: Prisma.FileAttachmentListRelationFilter
+  discussions?: Prisma.ProjectDiscussionListRelationFilter
+  automations?: Prisma.WorkflowAutomationListRelationFilter
 }, "id" | "organizationId_id">
 
 export type ProjectOrderByWithAggregationInput = {
@@ -277,6 +283,8 @@ export type ProjectCreateInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateInput = {
@@ -291,6 +299,8 @@ export type ProjectUncheckedCreateInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUpdateInput = {
@@ -305,6 +315,8 @@ export type ProjectUpdateInput = {
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateInput = {
@@ -319,6 +331,8 @@ export type ProjectUncheckedUpdateInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateManyInput = {
@@ -483,6 +497,34 @@ export type ProjectUpdateOneRequiredWithoutTasksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ProjectUpdateToOneWithWhereWithoutTasksInput, Prisma.ProjectUpdateWithoutTasksInput>, Prisma.ProjectUncheckedUpdateWithoutTasksInput>
 }
 
+export type ProjectCreateNestedOneWithoutAutomationsInput = {
+  create?: Prisma.XOR<Prisma.ProjectCreateWithoutAutomationsInput, Prisma.ProjectUncheckedCreateWithoutAutomationsInput>
+  connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutAutomationsInput
+  connect?: Prisma.ProjectWhereUniqueInput
+}
+
+export type ProjectUpdateOneRequiredWithoutAutomationsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProjectCreateWithoutAutomationsInput, Prisma.ProjectUncheckedCreateWithoutAutomationsInput>
+  connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutAutomationsInput
+  upsert?: Prisma.ProjectUpsertWithoutAutomationsInput
+  connect?: Prisma.ProjectWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProjectUpdateToOneWithWhereWithoutAutomationsInput, Prisma.ProjectUpdateWithoutAutomationsInput>, Prisma.ProjectUncheckedUpdateWithoutAutomationsInput>
+}
+
+export type ProjectCreateNestedOneWithoutDiscussionsInput = {
+  create?: Prisma.XOR<Prisma.ProjectCreateWithoutDiscussionsInput, Prisma.ProjectUncheckedCreateWithoutDiscussionsInput>
+  connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutDiscussionsInput
+  connect?: Prisma.ProjectWhereUniqueInput
+}
+
+export type ProjectUpdateOneRequiredWithoutDiscussionsNestedInput = {
+  create?: Prisma.XOR<Prisma.ProjectCreateWithoutDiscussionsInput, Prisma.ProjectUncheckedCreateWithoutDiscussionsInput>
+  connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutDiscussionsInput
+  upsert?: Prisma.ProjectUpsertWithoutDiscussionsInput
+  connect?: Prisma.ProjectWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ProjectUpdateToOneWithWhereWithoutDiscussionsInput, Prisma.ProjectUpdateWithoutDiscussionsInput>, Prisma.ProjectUncheckedUpdateWithoutDiscussionsInput>
+}
+
 export type ProjectCreateNestedOneWithoutFilesInput = {
   create?: Prisma.XOR<Prisma.ProjectCreateWithoutFilesInput, Prisma.ProjectUncheckedCreateWithoutFilesInput>
   connectOrCreate?: Prisma.ProjectCreateOrConnectWithoutFilesInput
@@ -524,6 +566,8 @@ export type ProjectCreateWithoutOrganizationInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutOrganizationInput = {
@@ -537,6 +581,8 @@ export type ProjectUncheckedCreateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutOrganizationInput = {
@@ -589,6 +635,8 @@ export type ProjectCreateWithoutMembersInput = {
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutMembersInput = {
@@ -602,6 +650,8 @@ export type ProjectUncheckedCreateWithoutMembersInput = {
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutMembersInput = {
@@ -631,6 +681,8 @@ export type ProjectUpdateWithoutMembersInput = {
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutMembersInput = {
@@ -644,6 +696,8 @@ export type ProjectUncheckedUpdateWithoutMembersInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutTasksInput = {
@@ -657,6 +711,8 @@ export type ProjectCreateWithoutTasksInput = {
   members?: Prisma.ProjectMemberCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutTasksInput = {
@@ -670,6 +726,8 @@ export type ProjectUncheckedCreateWithoutTasksInput = {
   members?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutTasksInput = {
@@ -699,6 +757,8 @@ export type ProjectUpdateWithoutTasksInput = {
   members?: Prisma.ProjectMemberUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutTasksInput = {
@@ -712,6 +772,160 @@ export type ProjectUncheckedUpdateWithoutTasksInput = {
   members?: Prisma.ProjectMemberUncheckedUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
+}
+
+export type ProjectCreateWithoutAutomationsInput = {
+  id?: string
+  name: string
+  description?: string | null
+  status?: $Enums.ProjectStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutProjectsInput
+  members?: Prisma.ProjectMemberCreateNestedManyWithoutProjectInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
+  files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+}
+
+export type ProjectUncheckedCreateWithoutAutomationsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  description?: string | null
+  status?: $Enums.ProjectStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutProjectInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
+  files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+}
+
+export type ProjectCreateOrConnectWithoutAutomationsInput = {
+  where: Prisma.ProjectWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProjectCreateWithoutAutomationsInput, Prisma.ProjectUncheckedCreateWithoutAutomationsInput>
+}
+
+export type ProjectUpsertWithoutAutomationsInput = {
+  update: Prisma.XOR<Prisma.ProjectUpdateWithoutAutomationsInput, Prisma.ProjectUncheckedUpdateWithoutAutomationsInput>
+  create: Prisma.XOR<Prisma.ProjectCreateWithoutAutomationsInput, Prisma.ProjectUncheckedCreateWithoutAutomationsInput>
+  where?: Prisma.ProjectWhereInput
+}
+
+export type ProjectUpdateToOneWithWhereWithoutAutomationsInput = {
+  where?: Prisma.ProjectWhereInput
+  data: Prisma.XOR<Prisma.ProjectUpdateWithoutAutomationsInput, Prisma.ProjectUncheckedUpdateWithoutAutomationsInput>
+}
+
+export type ProjectUpdateWithoutAutomationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumProjectStatusFieldUpdateOperationsInput | $Enums.ProjectStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutProjectsNestedInput
+  members?: Prisma.ProjectMemberUpdateManyWithoutProjectNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
+  files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+}
+
+export type ProjectUncheckedUpdateWithoutAutomationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumProjectStatusFieldUpdateOperationsInput | $Enums.ProjectStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.ProjectMemberUncheckedUpdateManyWithoutProjectNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
+  files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+}
+
+export type ProjectCreateWithoutDiscussionsInput = {
+  id?: string
+  name: string
+  description?: string | null
+  status?: $Enums.ProjectStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  organization: Prisma.OrganizationCreateNestedOneWithoutProjectsInput
+  members?: Prisma.ProjectMemberCreateNestedManyWithoutProjectInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
+  files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
+}
+
+export type ProjectUncheckedCreateWithoutDiscussionsInput = {
+  id?: string
+  organizationId: string
+  name: string
+  description?: string | null
+  status?: $Enums.ProjectStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutProjectInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
+  files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
+}
+
+export type ProjectCreateOrConnectWithoutDiscussionsInput = {
+  where: Prisma.ProjectWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProjectCreateWithoutDiscussionsInput, Prisma.ProjectUncheckedCreateWithoutDiscussionsInput>
+}
+
+export type ProjectUpsertWithoutDiscussionsInput = {
+  update: Prisma.XOR<Prisma.ProjectUpdateWithoutDiscussionsInput, Prisma.ProjectUncheckedUpdateWithoutDiscussionsInput>
+  create: Prisma.XOR<Prisma.ProjectCreateWithoutDiscussionsInput, Prisma.ProjectUncheckedCreateWithoutDiscussionsInput>
+  where?: Prisma.ProjectWhereInput
+}
+
+export type ProjectUpdateToOneWithWhereWithoutDiscussionsInput = {
+  where?: Prisma.ProjectWhereInput
+  data: Prisma.XOR<Prisma.ProjectUpdateWithoutDiscussionsInput, Prisma.ProjectUncheckedUpdateWithoutDiscussionsInput>
+}
+
+export type ProjectUpdateWithoutDiscussionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumProjectStatusFieldUpdateOperationsInput | $Enums.ProjectStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  organization?: Prisma.OrganizationUpdateOneRequiredWithoutProjectsNestedInput
+  members?: Prisma.ProjectMemberUpdateManyWithoutProjectNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
+  files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
+}
+
+export type ProjectUncheckedUpdateWithoutDiscussionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  organizationId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumProjectStatusFieldUpdateOperationsInput | $Enums.ProjectStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.ProjectMemberUncheckedUpdateManyWithoutProjectNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
+  files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutFilesInput = {
@@ -725,6 +939,8 @@ export type ProjectCreateWithoutFilesInput = {
   members?: Prisma.ProjectMemberCreateNestedManyWithoutProjectInput
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutFilesInput = {
@@ -738,6 +954,8 @@ export type ProjectUncheckedCreateWithoutFilesInput = {
   members?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutProjectInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutFilesInput = {
@@ -767,6 +985,8 @@ export type ProjectUpdateWithoutFilesInput = {
   members?: Prisma.ProjectMemberUpdateManyWithoutProjectNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutFilesInput = {
@@ -780,6 +1000,8 @@ export type ProjectUncheckedUpdateWithoutFilesInput = {
   members?: Prisma.ProjectMemberUncheckedUpdateManyWithoutProjectNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateWithoutNotificationsInput = {
@@ -793,6 +1015,8 @@ export type ProjectCreateWithoutNotificationsInput = {
   members?: Prisma.ProjectMemberCreateNestedManyWithoutProjectInput
   tasks?: Prisma.TaskCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectUncheckedCreateWithoutNotificationsInput = {
@@ -806,6 +1030,8 @@ export type ProjectUncheckedCreateWithoutNotificationsInput = {
   members?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutProjectInput
   tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutProjectInput
   files?: Prisma.FileAttachmentUncheckedCreateNestedManyWithoutProjectInput
+  discussions?: Prisma.ProjectDiscussionUncheckedCreateNestedManyWithoutProjectInput
+  automations?: Prisma.WorkflowAutomationUncheckedCreateNestedManyWithoutProjectInput
 }
 
 export type ProjectCreateOrConnectWithoutNotificationsInput = {
@@ -835,6 +1061,8 @@ export type ProjectUpdateWithoutNotificationsInput = {
   members?: Prisma.ProjectMemberUpdateManyWithoutProjectNestedInput
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutNotificationsInput = {
@@ -848,6 +1076,8 @@ export type ProjectUncheckedUpdateWithoutNotificationsInput = {
   members?: Prisma.ProjectMemberUncheckedUpdateManyWithoutProjectNestedInput
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectCreateManyOrganizationInput = {
@@ -870,6 +1100,8 @@ export type ProjectUpdateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateWithoutOrganizationInput = {
@@ -883,6 +1115,8 @@ export type ProjectUncheckedUpdateWithoutOrganizationInput = {
   tasks?: Prisma.TaskUncheckedUpdateManyWithoutProjectNestedInput
   notifications?: Prisma.NotificationUncheckedUpdateManyWithoutProjectNestedInput
   files?: Prisma.FileAttachmentUncheckedUpdateManyWithoutProjectNestedInput
+  discussions?: Prisma.ProjectDiscussionUncheckedUpdateManyWithoutProjectNestedInput
+  automations?: Prisma.WorkflowAutomationUncheckedUpdateManyWithoutProjectNestedInput
 }
 
 export type ProjectUncheckedUpdateManyWithoutOrganizationInput = {
@@ -904,6 +1138,8 @@ export type ProjectCountOutputType = {
   tasks: number
   notifications: number
   files: number
+  discussions: number
+  automations: number
 }
 
 export type ProjectCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -911,6 +1147,8 @@ export type ProjectCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   tasks?: boolean | ProjectCountOutputTypeCountTasksArgs
   notifications?: boolean | ProjectCountOutputTypeCountNotificationsArgs
   files?: boolean | ProjectCountOutputTypeCountFilesArgs
+  discussions?: boolean | ProjectCountOutputTypeCountDiscussionsArgs
+  automations?: boolean | ProjectCountOutputTypeCountAutomationsArgs
 }
 
 /**
@@ -951,6 +1189,20 @@ export type ProjectCountOutputTypeCountFilesArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.FileAttachmentWhereInput
 }
 
+/**
+ * ProjectCountOutputType without action
+ */
+export type ProjectCountOutputTypeCountDiscussionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProjectDiscussionWhereInput
+}
+
+/**
+ * ProjectCountOutputType without action
+ */
+export type ProjectCountOutputTypeCountAutomationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WorkflowAutomationWhereInput
+}
+
 
 export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -965,6 +1217,8 @@ export type ProjectSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   tasks?: boolean | Prisma.Project$tasksArgs<ExtArgs>
   notifications?: boolean | Prisma.Project$notificationsArgs<ExtArgs>
   files?: boolean | Prisma.Project$filesArgs<ExtArgs>
+  discussions?: boolean | Prisma.Project$discussionsArgs<ExtArgs>
+  automations?: boolean | Prisma.Project$automationsArgs<ExtArgs>
   _count?: boolean | Prisma.ProjectCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["project"]>
 
@@ -1007,6 +1261,8 @@ export type ProjectInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   tasks?: boolean | Prisma.Project$tasksArgs<ExtArgs>
   notifications?: boolean | Prisma.Project$notificationsArgs<ExtArgs>
   files?: boolean | Prisma.Project$filesArgs<ExtArgs>
+  discussions?: boolean | Prisma.Project$discussionsArgs<ExtArgs>
+  automations?: boolean | Prisma.Project$automationsArgs<ExtArgs>
   _count?: boolean | Prisma.ProjectCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ProjectIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1024,6 +1280,8 @@ export type $ProjectPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     tasks: Prisma.$TaskPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
     files: Prisma.$FileAttachmentPayload<ExtArgs>[]
+    discussions: Prisma.$ProjectDiscussionPayload<ExtArgs>[]
+    automations: Prisma.$WorkflowAutomationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1432,6 +1690,8 @@ export interface Prisma__ProjectClient<T, Null = never, ExtArgs extends runtime.
   tasks<T extends Prisma.Project$tasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$tasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifications<T extends Prisma.Project$notificationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   files<T extends Prisma.Project$filesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$filesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FileAttachmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  discussions<T extends Prisma.Project$discussionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$discussionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProjectDiscussionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  automations<T extends Prisma.Project$automationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Project$automationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkflowAutomationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1962,6 +2222,54 @@ export type Project$filesArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.FileAttachmentScalarFieldEnum | Prisma.FileAttachmentScalarFieldEnum[]
+}
+
+/**
+ * Project.discussions
+ */
+export type Project$discussionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ProjectDiscussion
+   */
+  select?: Prisma.ProjectDiscussionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ProjectDiscussion
+   */
+  omit?: Prisma.ProjectDiscussionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ProjectDiscussionInclude<ExtArgs> | null
+  where?: Prisma.ProjectDiscussionWhereInput
+  orderBy?: Prisma.ProjectDiscussionOrderByWithRelationInput | Prisma.ProjectDiscussionOrderByWithRelationInput[]
+  cursor?: Prisma.ProjectDiscussionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProjectDiscussionScalarFieldEnum | Prisma.ProjectDiscussionScalarFieldEnum[]
+}
+
+/**
+ * Project.automations
+ */
+export type Project$automationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkflowAutomation
+   */
+  select?: Prisma.WorkflowAutomationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkflowAutomation
+   */
+  omit?: Prisma.WorkflowAutomationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkflowAutomationInclude<ExtArgs> | null
+  where?: Prisma.WorkflowAutomationWhereInput
+  orderBy?: Prisma.WorkflowAutomationOrderByWithRelationInput | Prisma.WorkflowAutomationOrderByWithRelationInput[]
+  cursor?: Prisma.WorkflowAutomationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WorkflowAutomationScalarFieldEnum | Prisma.WorkflowAutomationScalarFieldEnum[]
 }
 
 /**

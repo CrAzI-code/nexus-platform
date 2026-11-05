@@ -22,6 +22,7 @@ export type IconName =
   | "search"
   | "settings"
   | "spark"
+  | "sliders"
   | "trend"
   | "users";
 
@@ -131,6 +132,14 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z" />
       <path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" />
+    </>
+  ),
+  sliders: (
+    <>
+      <path d="M4 6h9M17 6h3M4 12h3m4 0h9M4 18h7m4 0h5" />
+      <circle cx="15" cy="6" r="2" />
+      <circle cx="9" cy="12" r="2" />
+      <circle cx="13" cy="18" r="2" />
     </>
   ),
   trend: (

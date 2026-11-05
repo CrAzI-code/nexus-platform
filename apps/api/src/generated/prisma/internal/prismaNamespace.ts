@@ -406,6 +406,12 @@ export const ModelName = {
   Task: 'Task',
   TaskComment: 'TaskComment',
   TaskActivity: 'TaskActivity',
+  WorkflowAutomation: 'WorkflowAutomation',
+  WorkflowAutomationExecution: 'WorkflowAutomationExecution',
+  ProjectDiscussion: 'ProjectDiscussion',
+  ProjectDiscussionMessage: 'ProjectDiscussionMessage',
+  ProjectDiscussionRead: 'ProjectDiscussionRead',
+  TaskBlocker: 'TaskBlocker',
   FileAttachment: 'FileAttachment',
   TaskFileAttachment: 'TaskFileAttachment',
   Invitation: 'Invitation',
@@ -426,7 +432,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authIdentity" | "organization" | "organizationMembership" | "project" | "projectMember" | "task" | "taskComment" | "taskActivity" | "fileAttachment" | "taskFileAttachment" | "invitation" | "notification" | "auditLog"
+    modelProps: "user" | "authIdentity" | "organization" | "organizationMembership" | "project" | "projectMember" | "task" | "taskComment" | "taskActivity" | "workflowAutomation" | "workflowAutomationExecution" | "projectDiscussion" | "projectDiscussionMessage" | "projectDiscussionRead" | "taskBlocker" | "fileAttachment" | "taskFileAttachment" | "invitation" | "notification" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1096,6 +1102,450 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    WorkflowAutomation: {
+      payload: Prisma.$WorkflowAutomationPayload<ExtArgs>
+      fields: Prisma.WorkflowAutomationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WorkflowAutomationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WorkflowAutomationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>
+        }
+        findFirst: {
+          args: Prisma.WorkflowAutomationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WorkflowAutomationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>
+        }
+        findMany: {
+          args: Prisma.WorkflowAutomationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>[]
+        }
+        create: {
+          args: Prisma.WorkflowAutomationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>
+        }
+        createMany: {
+          args: Prisma.WorkflowAutomationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WorkflowAutomationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>[]
+        }
+        delete: {
+          args: Prisma.WorkflowAutomationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>
+        }
+        update: {
+          args: Prisma.WorkflowAutomationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>
+        }
+        deleteMany: {
+          args: Prisma.WorkflowAutomationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WorkflowAutomationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WorkflowAutomationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>[]
+        }
+        upsert: {
+          args: Prisma.WorkflowAutomationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationPayload>
+        }
+        aggregate: {
+          args: Prisma.WorkflowAutomationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWorkflowAutomation>
+        }
+        groupBy: {
+          args: Prisma.WorkflowAutomationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkflowAutomationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WorkflowAutomationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkflowAutomationCountAggregateOutputType> | number
+        }
+      }
+    }
+    WorkflowAutomationExecution: {
+      payload: Prisma.$WorkflowAutomationExecutionPayload<ExtArgs>
+      fields: Prisma.WorkflowAutomationExecutionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WorkflowAutomationExecutionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WorkflowAutomationExecutionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>
+        }
+        findFirst: {
+          args: Prisma.WorkflowAutomationExecutionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WorkflowAutomationExecutionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>
+        }
+        findMany: {
+          args: Prisma.WorkflowAutomationExecutionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>[]
+        }
+        create: {
+          args: Prisma.WorkflowAutomationExecutionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>
+        }
+        createMany: {
+          args: Prisma.WorkflowAutomationExecutionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WorkflowAutomationExecutionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>[]
+        }
+        delete: {
+          args: Prisma.WorkflowAutomationExecutionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>
+        }
+        update: {
+          args: Prisma.WorkflowAutomationExecutionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>
+        }
+        deleteMany: {
+          args: Prisma.WorkflowAutomationExecutionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WorkflowAutomationExecutionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WorkflowAutomationExecutionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>[]
+        }
+        upsert: {
+          args: Prisma.WorkflowAutomationExecutionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkflowAutomationExecutionPayload>
+        }
+        aggregate: {
+          args: Prisma.WorkflowAutomationExecutionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWorkflowAutomationExecution>
+        }
+        groupBy: {
+          args: Prisma.WorkflowAutomationExecutionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkflowAutomationExecutionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WorkflowAutomationExecutionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkflowAutomationExecutionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProjectDiscussion: {
+      payload: Prisma.$ProjectDiscussionPayload<ExtArgs>
+      fields: Prisma.ProjectDiscussionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectDiscussionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectDiscussionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectDiscussionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectDiscussionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>
+        }
+        findMany: {
+          args: Prisma.ProjectDiscussionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>[]
+        }
+        create: {
+          args: Prisma.ProjectDiscussionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>
+        }
+        createMany: {
+          args: Prisma.ProjectDiscussionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectDiscussionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectDiscussionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>
+        }
+        update: {
+          args: Prisma.ProjectDiscussionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectDiscussionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectDiscussionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectDiscussionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectDiscussionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionPayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectDiscussionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProjectDiscussion>
+        }
+        groupBy: {
+          args: Prisma.ProjectDiscussionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectDiscussionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectDiscussionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectDiscussionCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProjectDiscussionMessage: {
+      payload: Prisma.$ProjectDiscussionMessagePayload<ExtArgs>
+      fields: Prisma.ProjectDiscussionMessageFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectDiscussionMessageFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectDiscussionMessageFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectDiscussionMessageFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectDiscussionMessageFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>
+        }
+        findMany: {
+          args: Prisma.ProjectDiscussionMessageFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>[]
+        }
+        create: {
+          args: Prisma.ProjectDiscussionMessageCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>
+        }
+        createMany: {
+          args: Prisma.ProjectDiscussionMessageCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectDiscussionMessageCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectDiscussionMessageDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>
+        }
+        update: {
+          args: Prisma.ProjectDiscussionMessageUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectDiscussionMessageDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectDiscussionMessageUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectDiscussionMessageUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectDiscussionMessageUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionMessagePayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectDiscussionMessageAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProjectDiscussionMessage>
+        }
+        groupBy: {
+          args: Prisma.ProjectDiscussionMessageGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectDiscussionMessageGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectDiscussionMessageCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectDiscussionMessageCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProjectDiscussionRead: {
+      payload: Prisma.$ProjectDiscussionReadPayload<ExtArgs>
+      fields: Prisma.ProjectDiscussionReadFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProjectDiscussionReadFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProjectDiscussionReadFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>
+        }
+        findFirst: {
+          args: Prisma.ProjectDiscussionReadFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProjectDiscussionReadFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>
+        }
+        findMany: {
+          args: Prisma.ProjectDiscussionReadFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>[]
+        }
+        create: {
+          args: Prisma.ProjectDiscussionReadCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>
+        }
+        createMany: {
+          args: Prisma.ProjectDiscussionReadCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProjectDiscussionReadCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>[]
+        }
+        delete: {
+          args: Prisma.ProjectDiscussionReadDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>
+        }
+        update: {
+          args: Prisma.ProjectDiscussionReadUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>
+        }
+        deleteMany: {
+          args: Prisma.ProjectDiscussionReadDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProjectDiscussionReadUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProjectDiscussionReadUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>[]
+        }
+        upsert: {
+          args: Prisma.ProjectDiscussionReadUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProjectDiscussionReadPayload>
+        }
+        aggregate: {
+          args: Prisma.ProjectDiscussionReadAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProjectDiscussionRead>
+        }
+        groupBy: {
+          args: Prisma.ProjectDiscussionReadGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectDiscussionReadGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProjectDiscussionReadCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProjectDiscussionReadCountAggregateOutputType> | number
+        }
+      }
+    }
+    TaskBlocker: {
+      payload: Prisma.$TaskBlockerPayload<ExtArgs>
+      fields: Prisma.TaskBlockerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TaskBlockerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TaskBlockerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>
+        }
+        findFirst: {
+          args: Prisma.TaskBlockerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TaskBlockerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>
+        }
+        findMany: {
+          args: Prisma.TaskBlockerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>[]
+        }
+        create: {
+          args: Prisma.TaskBlockerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>
+        }
+        createMany: {
+          args: Prisma.TaskBlockerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TaskBlockerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>[]
+        }
+        delete: {
+          args: Prisma.TaskBlockerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>
+        }
+        update: {
+          args: Prisma.TaskBlockerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>
+        }
+        deleteMany: {
+          args: Prisma.TaskBlockerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TaskBlockerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TaskBlockerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>[]
+        }
+        upsert: {
+          args: Prisma.TaskBlockerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TaskBlockerPayload>
+        }
+        aggregate: {
+          args: Prisma.TaskBlockerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTaskBlocker>
+        }
+        groupBy: {
+          args: Prisma.TaskBlockerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TaskBlockerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TaskBlockerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TaskBlockerCountAggregateOutputType> | number
+        }
+      }
+    }
     FileAttachment: {
       payload: Prisma.$FileAttachmentPayload<ExtArgs>
       fields: Prisma.FileAttachmentFieldRefs
@@ -1626,6 +2076,106 @@ export const TaskActivityScalarFieldEnum = {
 export type TaskActivityScalarFieldEnum = (typeof TaskActivityScalarFieldEnum)[keyof typeof TaskActivityScalarFieldEnum]
 
 
+export const WorkflowAutomationScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  createdById: 'createdById',
+  name: 'name',
+  trigger: 'trigger',
+  conditionPriority: 'conditionPriority',
+  conditionStatus: 'conditionStatus',
+  conditionAssigneeId: 'conditionAssigneeId',
+  action: 'action',
+  actionValue: 'actionValue',
+  actionAssigneeId: 'actionAssigneeId',
+  enabled: 'enabled',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WorkflowAutomationScalarFieldEnum = (typeof WorkflowAutomationScalarFieldEnum)[keyof typeof WorkflowAutomationScalarFieldEnum]
+
+
+export const WorkflowAutomationExecutionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  ruleId: 'ruleId',
+  taskId: 'taskId',
+  sourceActivityId: 'sourceActivityId',
+  eventKey: 'eventKey',
+  trigger: 'trigger',
+  status: 'status',
+  reason: 'reason',
+  error: 'error',
+  attempt: 'attempt',
+  triggeredAt: 'triggeredAt',
+  completedAt: 'completedAt'
+} as const
+
+export type WorkflowAutomationExecutionScalarFieldEnum = (typeof WorkflowAutomationExecutionScalarFieldEnum)[keyof typeof WorkflowAutomationExecutionScalarFieldEnum]
+
+
+export const ProjectDiscussionScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  createdById: 'createdById',
+  title: 'title',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDiscussionScalarFieldEnum = (typeof ProjectDiscussionScalarFieldEnum)[keyof typeof ProjectDiscussionScalarFieldEnum]
+
+
+export const ProjectDiscussionMessageScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  discussionId: 'discussionId',
+  authorId: 'authorId',
+  body: 'body',
+  editedAt: 'editedAt',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDiscussionMessageScalarFieldEnum = (typeof ProjectDiscussionMessageScalarFieldEnum)[keyof typeof ProjectDiscussionMessageScalarFieldEnum]
+
+
+export const ProjectDiscussionReadScalarFieldEnum = {
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  discussionId: 'discussionId',
+  userId: 'userId',
+  lastReadAt: 'lastReadAt',
+  lastReadMessageId: 'lastReadMessageId',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProjectDiscussionReadScalarFieldEnum = (typeof ProjectDiscussionReadScalarFieldEnum)[keyof typeof ProjectDiscussionReadScalarFieldEnum]
+
+
+export const TaskBlockerScalarFieldEnum = {
+  id: 'id',
+  organizationId: 'organizationId',
+  projectId: 'projectId',
+  taskId: 'taskId',
+  reason: 'reason',
+  priorStatus: 'priorStatus',
+  createdById: 'createdById',
+  createdAt: 'createdAt',
+  resolvedById: 'resolvedById',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type TaskBlockerScalarFieldEnum = (typeof TaskBlockerScalarFieldEnum)[keyof typeof TaskBlockerScalarFieldEnum]
+
+
 export const FileAttachmentScalarFieldEnum = {
   id: 'id',
   organizationId: 'organizationId',
@@ -1901,6 +2451,55 @@ export type EnumTaskActivityTypeFieldRefInput<$PrismaModel> = FieldRefInputType<
  * Reference to a field of type 'TaskActivityType[]'
  */
 export type ListEnumTaskActivityTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TaskActivityType[]'>
+
+
+
+/**
+ * Reference to a field of type 'WorkflowAutomationTrigger'
+ */
+export type EnumWorkflowAutomationTriggerFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkflowAutomationTrigger'>
+
+
+
+/**
+ * Reference to a field of type 'WorkflowAutomationTrigger[]'
+ */
+export type ListEnumWorkflowAutomationTriggerFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkflowAutomationTrigger[]'>
+
+
+
+/**
+ * Reference to a field of type 'WorkflowAutomationAction'
+ */
+export type EnumWorkflowAutomationActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkflowAutomationAction'>
+
+
+
+/**
+ * Reference to a field of type 'WorkflowAutomationAction[]'
+ */
+export type ListEnumWorkflowAutomationActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkflowAutomationAction[]'>
+
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+
+
+
+/**
+ * Reference to a field of type 'WorkflowAutomationExecutionStatus'
+ */
+export type EnumWorkflowAutomationExecutionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkflowAutomationExecutionStatus'>
+
+
+
+/**
+ * Reference to a field of type 'WorkflowAutomationExecutionStatus[]'
+ */
+export type ListEnumWorkflowAutomationExecutionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WorkflowAutomationExecutionStatus[]'>
 
 
 
@@ -2203,6 +2802,12 @@ export type GlobalOmitConfig = {
   task?: Prisma.TaskOmit
   taskComment?: Prisma.TaskCommentOmit
   taskActivity?: Prisma.TaskActivityOmit
+  workflowAutomation?: Prisma.WorkflowAutomationOmit
+  workflowAutomationExecution?: Prisma.WorkflowAutomationExecutionOmit
+  projectDiscussion?: Prisma.ProjectDiscussionOmit
+  projectDiscussionMessage?: Prisma.ProjectDiscussionMessageOmit
+  projectDiscussionRead?: Prisma.ProjectDiscussionReadOmit
+  taskBlocker?: Prisma.TaskBlockerOmit
   fileAttachment?: Prisma.FileAttachmentOmit
   taskFileAttachment?: Prisma.TaskFileAttachmentOmit
   invitation?: Prisma.InvitationOmit

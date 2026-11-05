@@ -16,6 +16,8 @@ import {
   AssignTaskPipe,
   ChangeTaskStatusDto,
   ChangeTaskStatusPipe,
+  CreateTaskBlockerDto,
+  CreateTaskBlockerPipe,
   CreateTaskCommentDto,
   CreateTaskCommentPipe,
   CreateTaskDto,
@@ -112,6 +114,40 @@ export class TasksController {
       taskId,
       user.id,
       body,
+    );
+  }
+
+  @Post(':taskId/blockers')
+  createBlocker(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body(CreateTaskBlockerPipe) body: CreateTaskBlockerDto,
+  ): Promise<TaskDetailsResponse> {
+    return this.tasks.createBlocker(
+      organizationId,
+      projectId,
+      taskId,
+      user.id,
+      body,
+    );
+  }
+
+  @Patch(':taskId/blockers/:blockerId/resolve')
+  resolveBlocker(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('blockerId', ParseUUIDPipe) blockerId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<TaskDetailsResponse> {
+    return this.tasks.resolveBlocker(
+      organizationId,
+      projectId,
+      taskId,
+      blockerId,
+      user.id,
     );
   }
 

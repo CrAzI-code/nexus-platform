@@ -9,6 +9,8 @@ import { ClerkAuthService } from '../auth/clerk-auth.service.js';
 import { OrganizationsController } from './organizations.controller.js';
 import { OrganizationsService } from './organizations.service.js';
 
+const organizationId = 'a4d980b7-6493-4f82-92d4-0dd8c41dba14';
+
 describe('OrganizationsController', () => {
   let app: INestApplication<App>;
   const user: AuthenticatedUser = {
@@ -21,6 +23,7 @@ describe('OrganizationsController', () => {
   const organizations = {
     create: vi.fn(),
     listForUser: vi.fn(),
+    updateName: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -33,6 +36,12 @@ describe('OrganizationsController', () => {
       role: 'OWNER',
     });
     organizations.listForUser.mockResolvedValue([]);
+    organizations.updateName.mockResolvedValue({
+      id: 'organization-id',
+      name: 'Updated Studio',
+      slug: 'acme-studio',
+      role: 'ADMIN',
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [OrganizationsController],
@@ -116,9 +125,7 @@ describe('OrganizationsController', () => {
         },
       ]);
 
-    expect(organizations.listForUser).toHaveBeenCalledWith(
-      'verified-user-id',
-    );
+    expect(organizations.listForUser).toHaveBeenCalledWith('verified-user-id');
   });
 
   it('validates organization names before calling the service', async () => {
@@ -129,5 +136,53 @@ describe('OrganizationsController', () => {
       .expect(400);
 
     expect(organizations.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects organization profile changes without authentication', async () => {
+    await request(app.getHttpServer())
+      .patch(`/organizations/${organizationId}`)
+      .send({ name: 'Updated Studio' })
+      .expect(401);
+    expect(organizations.updateName).not.toHaveBeenCalled();
+  });
+
+  it('validates and applies organization name updates for the authenticated user', async () => {
+    await request(app.getHttpServer())
+      .patch(`/organizations/${organizationId}`)
+      .set('Authorization', 'Bearer test-token')
+      .send({ name: '  Updated Studio  ' })
+      .expect(200)
+      .expect({
+        id: 'organization-id',
+        name: 'Updated Studio',
+        slug: 'acme-studio',
+        role: 'ADMIN',
+      });
+
+    expect(organizations.updateName).toHaveBeenCalledWith(
+      organizationId,
+      'verified-user-id',
+      'Updated Studio',
+    );
+  });
+
+  it('rejects malformed or extra organization profile fields', async () => {
+    await request(app.getHttpServer())
+      .patch(`/organizations/${organizationId}`)
+      .set('Authorization', 'Bearer test-token')
+      .send({ name: '   ' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch(`/organizations/${organizationId}`)
+      .set('Authorization', 'Bearer test-token')
+      .send({ name: 'Updated Studio', slug: 'attacker-slug' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch('/organizations/not-a-uuid')
+      .set('Authorization', 'Bearer test-token')
+      .send({ name: 'Updated Studio' })
+      .expect(400);
+
+    expect(organizations.updateName).not.toHaveBeenCalled();
   });
 });

@@ -7,12 +7,11 @@ import type { Task, Workspace } from "./dashboard-data";
 import { DashboardSidebar, type DashboardSection } from "./dashboard-sidebar";
 import {
   ActivitySection,
-  OverviewSection,
   ProjectsSection,
   QuickActionsSection,
-  TaskOverviewSection,
   TasksSection,
 } from "./dashboard-sections";
+import { OrganizationAnalyticsPanel } from "./analytics-panels";
 import { Icon } from "./icons";
 import { ProjectDialog } from "./project-dialog";
 import { NotificationCenter } from "./notification-center";
@@ -20,12 +19,12 @@ import {
   archiveProject,
   createProject,
   listProjects,
+  restoreProject,
   updateProject,
   type OrganizationProject,
   type ProjectInput,
 } from "@/lib/organizations";
 import { listProjectTasks, TaskApiError } from "@/lib/tasks";
-import { getOrganizationTeam } from "@/lib/team";
 import { listOrganizationAuditLogs, type AuditLogItem } from "@/lib/audit-logs";
 import { organizationDashboardPath } from "@/lib/routes";
 
@@ -64,11 +63,6 @@ export default function Dashboard({
     tasks: Task[];
     error: string | null;
   }>({ organizationId: "", tasks: [], error: null });
-  const [memberLoad, setMemberLoad] = useState<{
-    organizationId: string;
-    count: number | null;
-    error: string | null;
-  }>({ organizationId: "", count: null, error: null });
   const [activityLoad, setActivityLoad] = useState<{
     organizationId: string;
     items: AuditLogItem[];
@@ -85,8 +79,6 @@ export default function Dashboard({
     taskLoad.organizationId === workspaceId ? taskLoad.tasks : [];
   const tasksError =
     taskLoad.organizationId === workspaceId ? taskLoad.error : null;
-  const isMembersLoading = memberLoad.organizationId !== workspaceId;
-  const memberCount = isMembersLoading ? null : memberLoad.count;
   const canViewAudit = workspace.role === "OWNER" || workspace.role === "ADMIN";
   const isActivityLoading = canViewAudit && activityLoad.organizationId !== workspaceId;
   const currentActivities = activityLoad.organizationId === workspaceId
@@ -204,41 +196,6 @@ export default function Dashboard({
 
   useEffect(() => {
     if (!workspaceId) return;
-    let active = true;
-
-    async function loadMembers() {
-      try {
-        const token = await getToken();
-        if (!token) throw new Error("Your session is unavailable. Sign in again to continue.");
-        const team = await getOrganizationTeam(token, workspaceId);
-        if (active) {
-          setMemberLoad({
-            organizationId: workspaceId,
-            count: team.members.length,
-            error: null,
-          });
-        }
-      } catch (requestError) {
-        if (active) {
-          setMemberLoad({
-            organizationId: workspaceId,
-            count: null,
-            error: requestError instanceof Error
-              ? requestError.message
-              : "We couldn’t load the member count.",
-          });
-        }
-      }
-    }
-
-    void loadMembers();
-    return () => {
-      active = false;
-    };
-  }, [getToken, workspaceId]);
-
-  useEffect(() => {
-    if (!workspaceId) return;
     if (!canViewAudit) {
       setActivityLoad({ organizationId: workspaceId, items: [], error: null });
       return;
@@ -347,6 +304,28 @@ export default function Dashboard({
     }
   }
 
+  async function handleRestore(project: OrganizationProject) {
+    try {
+      const token = await getSessionToken();
+      const restored = await restoreProject(token, workspaceId, project.id);
+      setProjectLoad((current) => ({
+        ...current,
+        projects: current.projects.map((item) =>
+          item.id === restored.id ? restored : item,
+        ),
+      }));
+      setProjectNotice("Project restored.");
+    } catch (requestError) {
+      setProjectLoad((current) => ({
+        ...current,
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : "We couldn’t restore this project. Please try again.",
+      }));
+    }
+  }
+
   const canCreateProject =
     workspace.role === "OWNER" ||
     workspace.role === "ADMIN" ||
@@ -438,14 +417,7 @@ export default function Dashboard({
             )}
           </section>
 
-          <OverviewSection
-            isMembersLoading={isMembersLoading}
-            isProjectsLoading={isProjectsLoading}
-            isTasksLoading={isTasksLoading}
-            memberCount={memberCount}
-            projects={projects}
-            tasks={currentTasks}
-          />
+          <OrganizationAnalyticsPanel organizationId={workspaceId} />
 
           <div className="content-grid">
             <ProjectsSection
@@ -455,6 +427,7 @@ export default function Dashboard({
               onArchive={handleArchive}
               onCreate={() => setProjectDialog("create")}
               onEdit={setProjectDialog}
+              onRestore={handleRestore}
               onRetry={() => setProjectRetry((value) => value + 1)}
               organizationId={workspaceId}
               projects={projects}
@@ -470,16 +443,13 @@ export default function Dashboard({
               organizationId={workspaceId}
             />
           </div>
-          <div className="dashboard-lower-grid">
-            <TaskOverviewSection tasks={currentTasks} />
-            <QuickActionsSection
-              canCreateProject={canCreateProject}
-              canViewAudit={canViewAudit}
-              onCreateProject={() => setProjectDialog("create")}
-              onNotifications={() => setIsNotificationsOpen(true)}
-              organizationId={workspaceId}
-            />
-          </div>
+          <QuickActionsSection
+            canCreateProject={canCreateProject}
+            canViewAudit={canViewAudit}
+            onCreateProject={() => setProjectDialog("create")}
+            onNotifications={() => setIsNotificationsOpen(true)}
+            organizationId={workspaceId}
+          />
           <TasksSection
             key={workspaceId}
             onClearSearch={() => setSearch("")}
