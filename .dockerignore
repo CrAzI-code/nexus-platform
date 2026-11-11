@@ -1,0 +1,14 @@
+.git
+.github
+.next
+**/.next
+node_modules
+**/node_modules
+**/dist
+**/coverage
+**/private-files
+**/.env
+**/.env.*
+**/*.dump
+**/*.log
+**/tmp
